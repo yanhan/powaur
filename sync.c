@@ -191,7 +191,7 @@ static int install_single_package(char *pkgname)
 
 	snprintf(buf, PATH_MAX, "%s.tar.gz", pkgname);
 
-	ret = extract_file(buf, 0);
+	ret = extract_file(buf);
 	if (ret) {
 		RET_ERR(PW_ERR_FILE_EXTRACT, -1);
 	}

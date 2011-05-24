@@ -23,7 +23,7 @@ __attribute__((format (printf, 3, 4)));
 int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, va_list ap)
 __attribute__((format (printf, 3, 0)));
 
-int extract_file(const char *filename, int verbose);
+int extract_file(const char *filename);
 int getcols(void);
 char *strtrim(char *line);
 int wait_or_whine(pid_t pid, char *argv0);

@@ -28,7 +28,6 @@ int download_single_file(const char *url, FILE *fp)
 		pw_fprintf(PW_LOG_ERROR, stderr, "curl: %s\n",
 				   curl_easy_strerror(curlret));
 		pwerrno = PW_ERR_CURL_DOWNLOAD;
-		pw_fprintf(PW_LOG_ERROR, stderr, "downloading %s failed.\n", url);
 		ret = -1;
 	}
 
@@ -36,8 +35,11 @@ int download_single_file(const char *url, FILE *fp)
 	if (httpresp != 200) {
 		pw_fprintf(PW_LOG_ERROR, stderr, "curl responded with http code: %ld\n",
 				  httpresp);
-		pw_fprintf(PW_LOG_ERROR, stderr, "downloading %s failed.\n", url);
 		ret = -1;
+	}
+
+	if (ret) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "downloading %s failed.\n", url);
 	}
 
 	return ret;
@@ -85,6 +87,11 @@ int download_single_package(const char *pkgname, alpm_list_t **failed_packages)
 
 cleanup:
 	FCLOSE(fp);
+
+	if (!ret) {
+		pw_printf(PW_LOG_INFO, "Downloaded %s\n", filename);
+	}
+
 	return ret;
 }
 
@@ -99,8 +106,7 @@ int download_packages(alpm_list_t *packages, alpm_list_t **failed_packages)
 
 	for (i = packages; i; i = i->next) {
 		ret = download_single_package((char *) i->data, failed_packages);
-		errors += ret ? 1:
-				  printf("Successfully downloaded %s.tar.gz\n", i->data) && 0;
+		errors += ret ? 1: 0;
 	}
 
 	return errors;
@@ -120,7 +126,7 @@ int dl_extract_single_package(const char *pkgname, alpm_list_t **failed_packages
 		return ret;
 	}
 
-	return extract_file(filename, 1);
+	return extract_file(filename);
 }
 
 /* Download pkgbuilds and extract in current directory.
@@ -144,9 +150,8 @@ int powaur_get(alpm_list_t *targets)
 		errors += download_single_package(i->data, &failed_packages);
 
 		if (pwerrno == 0) {
-			pw_printf(PW_LOG_INFO, "Downloaded %s.tar.gz\n", i->data);
 			snprintf(filename, PATH_MAX, "%s.tar.gz", i->data);
-			errors += extract_file(filename, 1) ? 1 : 0;
+			errors += extract_file(filename) ? 1 : 0;
 		} else if (pwerrno == PW_ERR_ACCESS) {
 			/* No write permission */
 			break;

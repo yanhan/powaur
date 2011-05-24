@@ -77,7 +77,7 @@ int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, va_list ap)
  * Assumed to be in destination directory before calling this.
  * Returns -1 on fatal errors, > 0 on extraction errors, 0 on success.
  */
-int extract_file(const char *filename, int verbose)
+int extract_file(const char *filename)
 {
 	/* Extract the archive */
 	struct archive *archive;
@@ -111,7 +111,9 @@ int extract_file(const char *filename, int verbose)
 			pw_fprintf(PW_LOG_ERROR, stderr, "Could not extract %s\n",
 					   archive_entry_pathname(entry));
 			++errors;
-		} else if (verbose) {
+		}
+
+		if (config->verbose) {
 			printf("X %s\n", archive_entry_pathname(entry));
 		}
 	}

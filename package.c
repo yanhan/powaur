@@ -373,7 +373,10 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			continue;
 		}
 
-		printf("\nResolving dependencies for %s\n", i->data);
+		if (config->verbose) {
+			printf("\nResolving dependencies for %s\n", i->data);
+		}
+
 		for (k = deps; k; k = k->next) {
 			found = 0;
 
@@ -387,7 +390,10 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			}
 
 			if (found) {
-				printf("%s%s - Already installed\n", comstrs.tab, k->data);
+				if (config->verbose) {
+					printf("%s%s - Already installed\n", comstrs.tab, k->data);
+				}
+
 				continue;
 			}
 
@@ -403,23 +409,31 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			}
 
 			if (found) {
-				printf("%s%s can be found in %s repo\n", comstrs.tab, k->data,
-					   alpm_db_get_name(alpm_pkg_get_db(pkg)));
+				if (config->verbose) {
+					printf("%s%s can be found in %s repo\n", comstrs.tab, k->data,
+						   alpm_db_get_name(alpm_pkg_get_db(pkg)));
+				}
+
 				continue;
 			}
 
 			/* Check the directory for pkg/PKGBUILD */
 			snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", k->data);
 			if (!stat(pkgbuild, &st)) {
-				printf("%s%s is present in current directory\n", comstrs.tab,
-					   k->data);
+				if (config->verbose) {
+					printf("%s%s is present in current directory\n", comstrs.tab,
+						   k->data);
+				}
+
 				continue;
 			}
 
 			/* Can't find it. Add to newdeps */
 			newdeps = alpm_list_add(newdeps, strdup(k->data));
-			printf("%s%s will be downloaded from the AUR\n", comstrs.tab,
-				   k->data);
+			if (config->verbose) {
+				printf("%s%s will be downloaded from the AUR\n", comstrs.tab,
+					   k->data);
+			}
 		}
 
 		/* Free deps */

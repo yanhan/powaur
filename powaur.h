@@ -13,7 +13,8 @@ enum {
 
 enum {
 	OP_DEBUG = 1000,
-	SORT_VOTE,
+	OPT_SORT_VOTE,
+	OPT_VERBOSE,
 	SEARCH_OR,
 	SEARCH_AND
 };

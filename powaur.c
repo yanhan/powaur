@@ -112,6 +112,7 @@ static void usage(unsigned short op)
 		}
 
 		printf("      --debug                display debug messages\n");
+		printf("      --verbose              display more messages\n");
 	}
 
 cleanup:
@@ -204,8 +205,11 @@ static int parsearg_global(int option)
 	case OP_DEBUG:
 		config->loglvl |= PW_LOG_DEBUG;
 		break;
-	case SORT_VOTE:
+	case OPT_SORT_VOTE:
 		config->sort_votes = 1;
+		break;
+	case OPT_VERBOSE:
+		config->verbose = 1;
 		break;
 	default:
 		return -1;
@@ -234,7 +238,8 @@ static int parseargs(int argc, char *argv[])
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
 		{"debug", no_argument, NULL, OP_DEBUG},
-		{"vote", no_argument, NULL, SORT_VOTE},
+		{"vote", no_argument, NULL, OPT_SORT_VOTE},
+		{"verbose", no_argument, NULL, OPT_VERBOSE},
 
 		/*{"or", no_argument, NULL, SEARCH_OR},
 		{"and", no_argument, NULL, SEARCH_AND},*/
