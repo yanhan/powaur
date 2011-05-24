@@ -51,6 +51,8 @@ int pkginfo_mod_cmp(const void *a, const void *b);
 
 void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp);
 
+alpm_list_t *resolve_dependencies(alpm_list_t *packages);
+
 int pacman_db_info(alpm_list_t *dbs, enum pkgfrom_t from, int search);
 void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from);
 

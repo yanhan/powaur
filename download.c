@@ -28,6 +28,7 @@ int download_single_file(const char *url, FILE *fp)
 		pw_fprintf(PW_LOG_ERROR, stderr, "curl: %s\n",
 				   curl_easy_strerror(curlret));
 		pwerrno = PW_ERR_CURL_DOWNLOAD;
+		pw_fprintf(PW_LOG_ERROR, stderr, "downloading %s failed.\n", url);
 		ret = -1;
 	}
 
@@ -35,10 +36,10 @@ int download_single_file(const char *url, FILE *fp)
 	if (httpresp != 200) {
 		pw_fprintf(PW_LOG_ERROR, stderr, "curl responded with http code: %ld\n",
 				  httpresp);
-		RET_ERR(PW_ERR_CURL_DOWNLOAD, -1);
+		pw_fprintf(PW_LOG_ERROR, stderr, "downloading %s failed.\n", url);
+		ret = -1;
 	}
 
-cleanup:
 	return ret;
 }
 
@@ -48,7 +49,7 @@ cleanup:
  * returns 0 on success, -1 on failure. 
  * Failed package is added to failed_packages list.
  */
-int download_single_package(char *pkgname, alpm_list_t **failed_packages)
+int download_single_package(const char *pkgname, alpm_list_t **failed_packages)
 {
 	int ret = 0;
 	FILE *fp = NULL;
@@ -59,7 +60,9 @@ int download_single_package(char *pkgname, alpm_list_t **failed_packages)
 	snprintf(filename, PATH_MAX, "%s.tar.gz", pkgname);
 	fp = fopen(filename, "w");
 	if (!fp) {
-		*failed_packages = alpm_list_add(*failed_packages, pkgname);
+		if (failed_packages) {
+			*failed_packages = alpm_list_add(*failed_packages, (void *) pkgname);
+		}
 
 		switch (errno) {
 		case EACCES:
@@ -103,6 +106,21 @@ int download_packages(alpm_list_t *packages, alpm_list_t **failed_packages)
 	return errors;
 }
 
+/* Downloads and extracts a single package */
+int dl_extract_single_package(const char *pkgname, alpm_list_t **failed_packages)
+{
+	int ret;
+	char filename[PATH_MAX];
+
+	ret = download_single_package(pkgname, failed_packages);
+	if (ret) {
+		return ret;
+	}
+
+	snprintf(filename, PATH_MAX, "%s.tar.gz", pkgname);
+	return extract_file(filename, 1);
+}
+
 /* Download pkgbuilds and extract in current directory.
  */
 int powaur_get(alpm_list_t *targets)
@@ -113,8 +131,11 @@ int powaur_get(alpm_list_t *targets)
 	ASSERT(curl != NULL, RET_ERR(PW_ERR_CURL_INIT, -1));
 
 	int errors = 0;
-	alpm_list_t *i, *failed_packages = NULL;
+	alpm_list_t *i, *failed_packages;
+	alpm_list_t *resolve, *new_resolve;
 	char filename[PATH_MAX];
+
+	failed_packages = resolve = new_resolve = NULL;
 
 	for (i = targets; i; i = i->next) {
 		pwerrno = 0;
@@ -127,6 +148,23 @@ int powaur_get(alpm_list_t *targets)
 		} else if (pwerrno == PW_ERR_ACCESS) {
 			/* No write permission */
 			break;
+		}
+
+		resolve = alpm_list_add(resolve, strdup(i->data));
+	}
+
+	/* Resolve dependencies */
+	while (resolve) {
+		new_resolve = resolve_dependencies(resolve);
+		FREELIST(resolve);
+		resolve = new_resolve;
+
+		for (i = resolve; i; i = i->next) {
+			if (dl_extract_single_package(i->data, &failed_packages)) {
+				pw_fprintf(PW_LOG_ERROR, stderr, "Could not download \"%s\""
+						   " from the AUR\n", i->data);
+				++errors;
+			}
 		}
 	}
 

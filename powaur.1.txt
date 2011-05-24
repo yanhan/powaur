@@ -11,7 +11,12 @@ powaur involves specifying an operation with applicable options and targets.
 .TP
 .B "-G, --getpkgbuild <package(s)>"
 Download PKGBUILDS from the AUR. PKGBUILDS are downloaded as tarballs, then
-extracted into the current working directory.
+extracted into the current working directory. Dependencies will be resolved
+for the packages and if any dependencies are from the AUR, they will be
+downloaded, with their dependencies resolved.
+.IP
+NOTE: For dependency resolution to work properly, the package names in the
+PKGBUILDS must be exact.
 .TP
 .B "-Q, --query"
 Query the pacman local database. This option lets you view information about

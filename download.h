@@ -4,7 +4,7 @@
 #include <alpm_list.h>
 
 int download_single_file(const char *url, FILE *fp);
-int download_single_package(char *pkgname, alpm_list_t **failed_packages);
+int download_single_package(const char *pkgname, alpm_list_t **failed_packages);
 int download_packages(alpm_list_t *packages, alpm_list_t **failed_packages);
 
 int powaur_get(alpm_list_t *targets);

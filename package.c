@@ -1,7 +1,9 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include <alpm.h>
 
@@ -158,13 +160,14 @@ int pkginfo_mod_cmp(const void *a, const void *b)
  * Refer to https://wiki.archlinux.org/index.php/Pkgbuild for details.
  */
 static void parse_bash_array(alpm_list_t **list, FILE *fp,
-							 char *buf, char *line)
+							 char *buf, char *line, int preserve_ver)
 {
-	static const char *delim = "'";
+	static const char *delim = " ";
 
 	int len;
 	int can_break = 0;
 	char *token, *saveptr;
+	char *tmpstr;
 
 	/* Parse multi-line bash array */
 	for (; !feof(fp) && !can_break; line = fgets(buf, PATH_MAX, fp)) {
@@ -182,16 +185,52 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 			 token; token = strtok_r(line, delim, &saveptr)) {
 			
 			token = strtrim(token);
-			if (strlen(token) == 0) {
+
+			/* Remove quotes */
+			if (token[0] == '\'' || token[0] == '"') {
+				++token;
+			}
+
+			len = strlen(token);
+			if (token[len-1] == '\'' || token[len-1] == '"') {
+				token[len-1] = 0;
+				--len;
+			}
+
+			if (len == 0) {
 				continue;
 			} else if (token[0] == ')') {
 				can_break = 1;
 				break;
+			} else if (token[len-1] == ')') {
+				can_break = 1;
+				token[len-1] = 0;
+				token = strtrim(token);
+
+				if (token[len-2] == '\'' || token[len-2] == '"') {
+					token[len-2] = 0;
+				}
 			}
 
-			*list = alpm_list_add(*list, strdup(token));
+			if (preserve_ver) {
+				*list = alpm_list_add(*list, strdup(token));
+			} else {
+				tmpstr = strchr(token, '>');
+				if (tmpstr) {
+					*tmpstr = 0;
+					token = strtrim(token);
+				}
 
-			pw_printf(PW_LOG_DEBUG, "    Parsed \"%s\"\n", token);
+				tmpstr = strchr(token, '=');
+				if (tmpstr) {
+					*tmpstr = 0;
+					token = strtrim(token);
+				}
+
+				*list = alpm_list_add(*list, strdup(token));
+			}
+
+			pw_printf(PW_LOG_DEBUG, "%sParsed \"%s\"\n", comstrs.tab, token);
 		}
 	}
 }
@@ -228,33 +267,167 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD depends\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->depends), fp, buf, line);
+			parse_bash_array(&(pkg->depends), fp, buf, line, 1);
 
 		} else if (!strncmp(line, "provides", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD provides\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->provides), fp, buf, line);
+			parse_bash_array(&(pkg->provides), fp, buf, line, 1);
 
 		} else if (!strncmp(line, "conflicts", 9)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD conflicts\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->conflicts), fp, buf, line);
+			parse_bash_array(&(pkg->conflicts), fp, buf, line, 1);
 		} else if (!strncmp(line, "replaces", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD replaces\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->replaces), fp, buf, line);
+			parse_bash_array(&(pkg->replaces), fp, buf, line, 1);
 		} else if (!strncmp(line, "arch", 4)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD architectures\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->arch), fp, buf, line);
+			parse_bash_array(&(pkg->arch), fp, buf, line, 1);
 		} else if (!strncmp(line, "build", 5)) {
 			break;
 		}
 	}
+}
+
+/* Returns the list of char * of dependencies specified in pkgbuild
+ * The list and its contents must be freed by the caller
+ */
+static alpm_list_t *grab_dependencies(const char *pkgbuild)
+{
+	alpm_list_t *ret = NULL;
+	FILE *fp;
+	char buf[PATH_MAX];
+	char *line;
+	size_t len;
+
+	fp = fopen(pkgbuild, "r");
+	if (!fp) {
+		return NULL;
+	}
+
+	while (line = fgets(buf, PATH_MAX, fp)) {
+		line = strtrim(line);
+		len = strlen(line);
+
+		if (!len) {
+			continue;
+		}
+
+		if (strncmp(line, "depends", 7)) {
+			continue;
+		}
+
+		/* Parse the array */
+		PARSE_BASH_ARRAY_PREAMBLE(line);
+		parse_bash_array(&ret, fp, buf, line, 0);
+		break;
+	}
+
+	fclose(fp);
+	return ret;
+}
+
+/* Resolve dependencies for powaur_get
+ * Basically, we just look through each of the PKGBUILD files, grab
+ * the list of new dependencies, check if they're installed or in the
+ * current directory.
+ *
+ * returns the list of unresolved dependencies.
+ */
+alpm_list_t *resolve_dependencies(alpm_list_t *packages)
+{
+	alpm_list_t *i, *k, *m, *q;
+	alpm_list_t *deps, *newdeps, *dbcache;
+	alpm_list_t *syncdb_caches = NULL;
+
+	pmdb_t *localdb;
+	pmpkg_t *pkg;
+	char pkgbuild[PATH_MAX];
+	int found = 0;
+	struct stat st;
+
+	localdb = alpm_option_get_localdb();
+	ASSERT(localdb != NULL, RET_ERR(PW_ERR_LOCALDB_NULL, NULL));
+
+	newdeps = NULL;
+	dbcache = alpm_db_get_pkgcache(localdb);
+
+	for (i = alpm_option_get_syncdbs(); i; i = i->next) {
+		syncdb_caches = alpm_list_add(syncdb_caches,
+									  alpm_db_get_pkgcache((pmdb_t *) i->data));
+	}
+
+	for (i = packages; i; i = i->next) {
+		snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", i->data);
+		/* Grab the list of new dependencies from PKGBUILD */
+		deps = grab_dependencies(pkgbuild);
+
+		if (!deps) {
+			continue;
+		}
+
+		printf("\nResolving dependencies for %s\n", i->data);
+		for (k = deps; k; k = k->next) {
+			found = 0;
+
+			/* Check against localdb */
+			for (m = dbcache; m; m = m->next) {
+				pkg = m->data;
+				if (!strcmp(k->data, alpm_pkg_get_name(pkg))) {
+					found = 1;
+					break;
+				}
+			}
+
+			if (found) {
+				printf("%s%s - Already installed\n", comstrs.tab, k->data);
+				continue;
+			}
+
+			/* Check against sync dbs */
+			for (m = syncdb_caches; m && !found; m = m->next) {
+				for (q = m->data; q; q = q->next) {
+					pkg = q->data;
+					if (!strcmp(k->data, alpm_pkg_get_name(pkg))) {
+						found = 1;
+						break;
+					}
+				}
+			}
+
+			if (found) {
+				printf("%s%s can be found in %s repo\n", comstrs.tab, k->data,
+					   alpm_db_get_name(alpm_pkg_get_db(pkg)));
+				continue;
+			}
+
+			/* Check the directory for pkg/PKGBUILD */
+			snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", k->data);
+			if (!stat(pkgbuild, &st)) {
+				printf("%s%s is present in current directory\n", comstrs.tab,
+					   k->data);
+				continue;
+			}
+
+			/* Can't find it. Add to newdeps */
+			newdeps = alpm_list_add(newdeps, strdup(k->data));
+			printf("%s%s will be downloaded from the AUR\n", comstrs.tab,
+				   k->data);
+		}
+
+		/* Free deps */
+		FREELIST(deps);
+	}
+
+	alpm_list_free(syncdb_caches);
+	return newdeps;
 }
 
 /* Akin to yaourt -Si / pacman -Si.
