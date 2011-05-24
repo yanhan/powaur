@@ -112,12 +112,14 @@ int dl_extract_single_package(const char *pkgname, alpm_list_t **failed_packages
 	int ret;
 	char filename[PATH_MAX];
 
+	snprintf(filename, PATH_MAX, "%s.tar.gz", pkgname);
 	ret = download_single_package(pkgname, failed_packages);
+
 	if (ret) {
+		unlink(filename);
 		return ret;
 	}
 
-	snprintf(filename, PATH_MAX, "%s.tar.gz", pkgname);
 	return extract_file(filename, 1);
 }
 
