@@ -1,0 +1,101 @@
+.TH POWAUR 1 "23-05-2011" "powaur" "powaur manual"
+.SH NAME
+powaur \- an AUR helper with a pacman-like interface
+.SH SYNOPSIS
+.I powaur
+<operation> [options] [targets]
+.SH DESCRIPTION
+powaur is an AUR helper which provides a pacman-like interface. Invoking
+powaur involves specifying an operation with applicable options and targets.
+.SH OPERATIONS
+.TP
+.B "-G, --getpkgbuild <package(s)>"
+Download PKGBUILDS from the AUR. PKGBUILDS are downloaded as tarballs, then
+extracted into the current working directory.
+.TP
+.B "-Q, --query"
+Query the pacman local database. This option lets you view information about
+installed packages (eg. dependencies, provides, installed date). When no
+packages are provided, all installed packages will be queried.
+.TP
+.B "-S, --sync"
+Synchronize packages. When used with no options, at least one target is
+required and powaur will attempt to install the target package(s) from the AUR.
+Do note that powaur does NOT provide dependency resolution.
+.IP
+Note that the use of this flag to install AUR packages is discouraged.
+You are adviced to use the -G flag to download PKGBUILDS and review them
+before installing them using makepkg.
+.TP
+.B "-M, --maintainer <person>"
+Search the AUR for packages maintained by person. 1 and only 1 maintainer must
+be specified.
+.TP
+.B "-B, --backup"
+Backup the local pacman database. See Backup Usage.
+.TP
+.B "-h, --help"
+Displays help message and exits.
+.TP
+.B "-V, --version"
+Displays version information and exits.
+.SH OPTIONS
+.TP
+.B "--debug"
+Display debug messages.
+.SH QUERY OPTIONS
+.TP
+.B "-i, --info"
+Displays information on installed packages. If no packages were specified, then
+information on all installed packages is displayed.
+.TP
+.B "-s, --search"
+Searches installed packages for the specified package(s). If no packages were
+specified, then all installed packages will be listed.
+.SH SYNC OPTIONS
+.TP
+.B "-i, --info"
+Searches sync databases, followed by AUR for package information. If no
+packages were specified, then information on all packages from all sync
+databases is displayed.
+.TP
+.B "-s, --search"
+Searches the AUR for a specified package. Currently, there is only support for
+searching for 1 package.
+.TP
+.B "--vote"
+.br
+Used with -s. Orders search results from the AUR by vote count instead of
+alphabetical order.
+.SH MAINTAINER OPTIONS
+.TP
+.B "--vote"
+.br
+Orders search results from the AUR by vote count instead of alphabetical order.
+.SH BACKUP USAGE
+.IP "powaur -B"
+Backup pacman database to current working directory.
+.IP "powaur -B dir"
+Backup pacman database to dir.
+.SH Configuration
+powaur looks for its configuration file first in:
+.P
+	$XDG_CONFIG_HOME/powaur.conf
+.P
+followed by:
+.P
+	$HOME/.config/powaur.conf
+.P
+1 and only 1 of the above files will be parsed. In the event of unspecified
+configuration settings, powaur will fallback to using the defaults.
+.P
+A sample config file can be found at /usr/share/powaur/powaur.conf
+.SH CREDITS
+Dave Reisner - For his kind permission to let powaur use code from cower
+.P
+pacman, git - Source code was used from both of these projects, especially
+pacman
+.SH BUG REPORTS
+Please email bug reports to <powaurdev@gmail.com>
+.SH AUTHOR
+Pang Yan Han <pangyanhan@gmail.com>

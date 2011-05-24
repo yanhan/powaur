@@ -1,0 +1,33 @@
+-------------------
+SYSTEM REQUIREMENTS
+-------------------
+
+libcurl
+pacman
+yajl
+
+
+-------
+TARBALL
+-------
+
+The normal installation for a tarball package follows.
+$ ./configure
+$ make
+# make install
+
+
+---
+GIT
+---
+
+If you've obtained the source code from git,
+
+$ ./autogen.sh
+
+To generate the configure script. Then follow the tarball installation
+procedures.
+
+To cleanup:
+
+$ ./autoclean.sh

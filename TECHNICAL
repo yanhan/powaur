@@ -1,0 +1,113 @@
+-----------------
+WHY THIS DOCUMENT
+-----------------
+
+There are some things that powaur does internally which I think deserves a
+quick bird's-eye view somewhere; hence this document.
+
+
+----------------------------
+PACMAN CONFIGURATION PARSING
+----------------------------
+
+Currently, there is only 1 hardcoded setting about pacman - which is where
+the configuration file is located (/etc/rc.conf).
+
+powaur parses the following settings from the options section of
+/etc/rc.conf:
+
+- RootDir
+- DBPath
+- CacheDir
+
+In addition, /etc/rc.conf is also checked for sync repositories. Only the
+repository name itself is parsed and registered as a sync database.
+
+Now this is the screwed up part. powaur ASSUMES that most users don't mess
+around with the comments in /etc/rc.conf and leave them intact.
+
+
+Algorithm for parsing /etc/rc.conf (Assuming we are inside [options]):
+
+1. If line is a comment, remove '#' character and compare against "RootDir",
+   "DBPath", "CacheDir". These are "commented options". Their non-comment
+   versions are "official options".
+
+   If it matches and we don't have the same commented option or
+   official option, set the value of the option to what we get after the
+   '=' character. Subsequent matchings to the same commented option will
+   NOT be considered.
+
+2. Else if line is not a comment, compare against "RootDir", "DBPath",
+   "CacheDir".
+
+   If it matches and we don't have an official option, then set the value
+   of the option to what we get after the '=' character. Subsequent matches
+   to the same commented option will NOT be considered. Subsequent matches
+   to the same non-commented option will be deemed an error.
+
+End of Algorithm
+
+
+
+In other words, powaur will look at comment lines for default settings if
+you choose not to change them. Then it tries to find a changed setting and
+change to it.
+
+Example
+-------
+
+Line no.	/etc/rc.conf
+	1		#RootDir=/
+	2		#RootDir=/etc
+	3		RootDir=/
+	4		#RootDir=/bleh
+
+Analysis
+--------
+
+1. First, line 1 is parsed and though it is a commented line, RootDir is not set.
+   So RootDir is set to /
+
+2. Then, we encounter a commented RootDir again. powaur ignores this line since
+   we already parsed a commented version of it above.
+
+3. A non-commented RootDir is encountered. We set the RootDir to / . This is
+   the final change to RootDir.
+
+4. We encounter a commented RootDir = /bleh. Since the official RootDir is now
+   set, we ignore this and subsequent commented RootDir.
+
+
+Assuming we can't find anything (not even commented versions) of the above,
+we fall back to the defaults of:
+
+RootDir = /
+DBPath = /var/lib/pacman/
+CacheDir = /var/cache/pacman/pkg/
+
+
+PHEW. Yes that's it. I know it's screwed up, I cursed at myself when writing
+the code for it and had a hard time doing it. So I just did it.
+
+Now, give yourself a round of applause if you've made it so far. The rest is
+all easy stuff.
+
+
+---------------------------------
+POWAUR CONFIGURATION FILE PARSING
+---------------------------------
+
+Currently, powaur looks for its configuration file (powaur.conf) in:
+
+$XDG_CONFIG_HOME
+$HOME/.config/
+
+If these files don't exist, powaur falls back to its default settings.
+Only 1 and 1 of the above files will be parsed.
+
+In the case that not all settings are specified in the config file, powaur
+wll fall back to defaults for those unspecified settings.
+
+
+That's all for now. Thanks for reading!

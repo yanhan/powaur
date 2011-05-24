@@ -1,0 +1,91 @@
+# This file is processed by configure to produce the final Makefile
+# The default goal of this Makefile is...
+all::
+
+CFLAGS=@CFLAGS@
+LDFLAGS=@LDFLAGS@
+ALL_CFLAGS=$(CFLAGS)
+ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+sysconfdir=@sysconfdir@
+mandir=@mandir@
+man1dir=$(mandir)/man1
+
+CC=@CC@
+TAR=tar
+INSTALL=install
+RM=rm -f
+
+SHELL=/bin/sh
+.SUFFIXES:
+.SUFFIXES: .c .o
+
+POWAUR-VERSION-FILE: FORCE
+	@$(SHELL) ./POWAUR-VERSION-GEN
+-include POWAUR-VERSION-FILE
+
+SRC=conf.c curl.c download.c environment.c error.c handle.c json.c package.c \
+	powaur.c query.c sync.c util.c
+
+HDRS=conf.h curl.h download.h environment.h error.h handle.h json.h package.h \
+	 powaur.h query.h sync.h util.h
+
+OBJS=$(SRC:.c=.o)
+
+DIST_FILES=$(SRC) $(HDRS) POWAUR-VERSION-GEN configure config.h.in Makefile.in \
+		   powaur.1.txt powaur.conf COPYING INSTALL README TECHNICAL
+
+all:: powaur
+
+powaur: $(OBJS)
+	$(CC) $(OBJS) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS)
+
+$(OBJS): environment.h powaur.h util.h
+conf.o environment.o query.o: conf.h
+download.o json.o sync.o: curl.h
+download.o powaur.o sync.o: download.h
+error.o util.o: error.h
+handle.o json.o powaur.o: handle.h
+handle.o powaur.o sync.o: json.h
+query.o powaur.o sync.o: package.h
+json.o query.o: query.h
+powaur.o sync.o: sync.h
+
+install: all
+	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 powaur $(DESTDIR)$(bindir)
+	@cp powaur.1.txt powaur.1
+	@gzip -9 powaur.1
+	$(INSTALL) -d -m 755 $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 644 powaur.1.gz $(DESTDIR)$(man1dir)
+	$(INSTALL) -d -m 755 $(DESTDIR)/usr/share/powaur/
+	$(INSTALL) -m 644 powaur.conf $(DESTDIR)/usr/share/powaur/
+	@$(RM) powaur.1.gz
+
+clean:
+	-$(RM) powaur *.o
+	-$(RM) -r $(POWAUR_TARNAME)
+	-$(RM) $(POWAUR_TARNAME).tar.gz
+	-$(RM) POWAUR-VERSION-FILE
+
+POWAUR_TARNAME=powaur-$(POWAUR_VERSION)
+dist: configure
+	@$(RM) $(POWAUR_TARNAME)
+	@mkdir $(POWAUR_TARNAME)
+	@cp $(DIST_FILES) $(POWAUR_TARNAME)
+	@echo $(POWAUR_VERSION) > $(POWAUR_TARNAME)/version
+	tar -cf $(POWAUR_TARNAME).tar $(POWAUR_TARNAME)
+	gzip -9 $(POWAUR_TARNAME).tar
+	@$(RM) -r $(POWAUR_TARNAME)
+
+distclean: clean
+	-$(RM) configure
+	-$(RM) -r autom4te.cache
+	-$(RM) config.log config.status
+
+.PHONY: all clean dist distclean install FORCE

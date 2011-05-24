@@ -1,0 +1,12 @@
+*.o
+*.swp
+*~
+autom4te.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+Makefile
+POWAUR-VERSION-FILE
+powaur-*.tar.gz
