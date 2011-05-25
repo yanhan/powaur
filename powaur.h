@@ -15,6 +15,7 @@ enum {
 	OP_DEBUG = 1000,
 	OPT_SORT_VOTE,
 	OPT_VERBOSE,
+	OPT_TARGET_DIR,
 	SEARCH_OR,
 	SEARCH_AND
 };
@@ -68,6 +69,7 @@ enum _pw_errno_t {
 	PW_ERR_FILE_EXTRACT,
 	PW_ERR_OPENDIR,
 	PW_ERR_STAT,
+	PW_ERR_PATH_RESOLVE,
 
 	/* Fork errors */
 	PW_ERR_FORK_FAILED,

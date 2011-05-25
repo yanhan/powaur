@@ -575,7 +575,11 @@ int powaur_sync(alpm_list_t *targets)
 	}
 
 	/* DL the packages, get the working ones and install them */
-	ret = download_packages(targets, &dl_failed);
+	download_packages(targets, &dl_failed);
+	if (pwerrno == PW_ERR_ACCESS) {
+		goto cleanup;
+	}
+
 	final_targets = list_diff(targets, dl_failed, (alpm_list_fn_cmp) strcmp);
 
 	ret = install_packages(final_targets, &nonzero_install);

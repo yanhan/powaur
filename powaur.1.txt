@@ -48,6 +48,11 @@ Displays version information and exits.
 .TP
 .B "--debug"
 Display debug messages.
+.SH GETPKGBUILD OPTIONS
+.TP
+.B "--target <DIR>"
+Downloads packages to alterante directory <DIR> instead of the current working
+directory.
 .SH QUERY OPTIONS
 .TP
 .B "-i, --info"

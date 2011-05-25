@@ -24,6 +24,7 @@ struct config_t {
 	/* Misc */
 	unsigned sort_votes: 1;
 	unsigned verbose: 1;
+	char *target_dir;
 };
 
 struct config_t *config_init(void);

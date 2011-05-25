@@ -61,6 +61,8 @@ const char *pw_strerror(enum _pw_errno_t err)
 		return "Failed to open directory";
 	case PW_ERR_STAT:
 		return "Failed to stat file/directory";
+	case PW_ERR_PATH_RESOLVE:
+		return "Failed to resolve path";
 
 	/* fork errors */
 	case PW_ERR_FORK_FAILED:

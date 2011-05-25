@@ -93,15 +93,18 @@ static void usage(unsigned short op)
 		printf("%s:\n", comstrs.opt);
 
 		switch (op) {
-		case PW_OP_MAINTAINER:
-			printf("      --vote                 order search results by votes\n");
-			break;
 		case PW_OP_SYNC:
 		case PW_OP_QUERY:
 			printf("  -i, --info                 view package information\n");
 			printf("  -s, --search <%s>  search %s repositories for %s\n",
 				   comstrs.pkg, op == PW_OP_SYNC ? "sync" : "local",
 				   comstrs.pkg);
+			break;
+		case PW_OP_GET:
+			printf("      --target <DIR>         downloads to alternate directory DIR\n");
+			break;
+		case PW_OP_MAINTAINER:
+			printf("      --vote                 order search results by votes\n");
 			break;
 		default:
 			break;
@@ -211,6 +214,9 @@ static int parsearg_global(int option)
 	case OPT_VERBOSE:
 		config->verbose = 1;
 		break;
+	case OPT_TARGET_DIR:
+		config->target_dir = strdup(optarg);
+		break;
 	default:
 		return -1;
 	}
@@ -240,6 +246,7 @@ static int parseargs(int argc, char *argv[])
 		{"debug", no_argument, NULL, OP_DEBUG},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},
 		{"verbose", no_argument, NULL, OPT_VERBOSE},
+		{"target", required_argument, NULL, OPT_TARGET_DIR},
 
 		/*{"or", no_argument, NULL, SEARCH_OR},
 		{"and", no_argument, NULL, SEARCH_AND},*/

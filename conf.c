@@ -24,6 +24,7 @@ struct config_t *config_init(void)
 void config_free(struct config_t *conf)
 {
 	if (conf) {
+		free(conf->target_dir);
 		free(conf);
 	}
 }
