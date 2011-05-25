@@ -24,14 +24,14 @@ as possible, without sacrificing too much performance. After all, why learn
 an additional set of commands when you are already familiar with one that
 works? =)
 
-powaur seeks to
+powaur seeks to:
 
 - provide an interface as similar to pacman as possible
-
 - do things efficiently. Hence C is the language of choice
 
 
 Inspiration for powaur has come from:
+
 - cower
 - pacman
 - yaourt
@@ -67,6 +67,7 @@ CREDITS
 Dave Reisner for allowing me to use code from cower (json parsing using yajl)
 
 Some source code in powaur comes from the following projects:
+
 - pacman
 - git
 
