@@ -19,7 +19,9 @@ struct config_t {
 	/* Sync options */
 	unsigned op_s_info: 1;
 	unsigned op_s_search: 1;
-	unsigned op_s_detailed: 1;	/* TODO: Remove this */
+
+	/* -G options */
+	unsigned op_g_resolve: 1;
 
 	/* Misc */
 	unsigned sort_votes: 1;

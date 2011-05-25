@@ -185,6 +185,11 @@ int powaur_get(alpm_list_t *targets)
 		resolve = alpm_list_add(resolve, strdup(i->data));
 	}
 
+	if (!config->op_g_resolve) {
+		FREELIST(resolve);
+		goto cleanup;
+	}
+
 	/* Resolve dependencies */
 	while (resolve) {
 		new_resolve = resolve_dependencies(resolve);

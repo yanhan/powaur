@@ -44,7 +44,7 @@ AC_STRUCT_TM
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([getcwd localtime_r memset mkdir strchr strdup strndup \
+AC_CHECK_FUNCS([getcwd localtime_r memset mkdir realpath strchr strdup strndup \
 				strcasecmp])
 
 AC_OUTPUT

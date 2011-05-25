@@ -11,12 +11,8 @@ powaur involves specifying an operation with applicable options and targets.
 .TP
 .B "-G, --getpkgbuild <package(s)>"
 Download PKGBUILDS from the AUR. PKGBUILDS are downloaded as tarballs, then
-extracted into the current working directory. Dependencies will be resolved
-for the packages and if any dependencies are from the AUR, they will be
-downloaded, with their dependencies resolved.
-.IP
-NOTE: For dependency resolution to work properly, the package names in the
-PKGBUILDS must be exact.
+extracted into the current working directory. Dependency resolution can be
+turned on with the --deps flag.
 .TP
 .B "-Q, --query"
 Query the pacman local database. This option lets you view information about
@@ -26,7 +22,7 @@ packages are provided, all installed packages will be queried.
 .B "-S, --sync"
 Synchronize packages. When used with no options, at least one target is
 required and powaur will attempt to install the target package(s) from the AUR.
-Do note that powaur does NOT provide dependency resolution.
+There is no dependency resolution.
 .IP
 Note that the use of this flag to install AUR packages is discouraged.
 You are adviced to use the -G flag to download PKGBUILDS and review them
@@ -49,6 +45,15 @@ Displays version information and exits.
 .B "--debug"
 Display debug messages.
 .SH GETPKGBUILD OPTIONS
+.TP
+.B "--deps"
+Resolve dependencies for all target packages. If any dependencies are from the
+AUR, they will be downloaded, with their dependencies resolved. This is done
+until all dependencies have been resolved.
+.IP
+NOTE: For dependency resolution to work properly, the package names in the
+PKGBUILDS must be exact. Use the --verbose flag to see more information for
+dependency resolution.
 .TP
 .B "--target <DIR>"
 Downloads packages to alterante directory <DIR> instead of the current working

@@ -104,6 +104,7 @@ static void usage(unsigned short op)
 			break;
 		case PW_OP_GET:
 			printf("      --target <DIR>         downloads to alternate directory DIR\n");
+			printf("      --deps                 resolves dependencies\n");
 			break;
 		case PW_OP_MAINTAINER:
 			printf("      --vote                 order search results by votes\n");
@@ -169,7 +170,7 @@ static int parsearg_op(int option, int dry_run)
 	return 0;
 }
 
-/* Parse arguments for sync operaton */
+/* Parse options for -S (--sync) */
 static int parsearg_sync(int option)
 {
 	switch (option) {
@@ -186,7 +187,7 @@ static int parsearg_sync(int option)
 	return 0;
 }
 
-/* Parse arguments for query operaton */
+/* Parse options for -Q (--query) */
 static int parsearg_query(int option)
 {
 	switch (option) {
@@ -200,6 +201,20 @@ static int parsearg_query(int option)
 		return -1;
 	}
 	
+	return 0;
+}
+
+/* Parse options for -G (--getpkgbuild) */
+static int parsearg_get(int option)
+{
+	switch (option) {
+	case OPT_RESOLVE_DEPS:
+		config->op_g_resolve = 1;
+		break;
+	default:
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -249,6 +264,7 @@ static int parseargs(int argc, char *argv[])
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},
 		{"verbose", no_argument, NULL, OPT_VERBOSE},
 		{"target", required_argument, NULL, OPT_TARGET_DIR},
+		{"deps", no_argument, NULL, OPT_RESOLVE_DEPS},
 
 		/*{"or", no_argument, NULL, SEARCH_OR},
 		{"and", no_argument, NULL, SEARCH_AND},*/
@@ -301,6 +317,8 @@ static int parseargs(int argc, char *argv[])
 			res = parsearg_query(opt);
 			break;
 		case PW_OP_GET:
+			res = parsearg_get(opt);
+			break;
 		case PW_OP_MAINTAINER:
 		case PW_OP_BACKUP:
 		default:
