@@ -1,6 +1,52 @@
+#include <limits.h>
+#include <stdarg.h>
+
 #include "environment.h"
 #include "error.h"
 #include "powaur.h"
+#include "util.h"
+
+int error(enum _pw_errno_t err, ...)
+{
+	char buf[PATH_MAX];
+	va_list args;
+
+	pwerrno = err;
+	va_start(args, err);
+	vsnprintf(buf, PATH_MAX, pw_strerror(err), args);
+	fprintf(stderr, "error: %s\n", buf);
+	va_end(args);
+
+	return -1;
+}
+
+void die(const char *msg, ...)
+{
+	char buf[PATH_MAX];
+	va_list ap;
+	va_start(ap, msg);
+
+	vsnprintf(buf, PATH_MAX, msg, ap);
+	fprintf(stderr, "fatal: %s\n", buf);
+
+	va_end(ap);
+	exit(1);
+}
+
+void die_errno(enum _pw_errno_t err, ...)
+{
+	pwerrno = err;
+
+	char buf[PATH_MAX];
+	va_list ap;
+	va_start(ap, err);
+
+	vsnprintf(buf, PATH_MAX, pw_strerror(err), ap);
+	fprintf(stderr, "fatal: %s\n", buf);
+
+	va_end(ap);
+	exit(1);
+}
 
 const char *pw_strerrorlast(void)
 {
@@ -18,7 +64,7 @@ const char *pw_strerror(enum _pw_errno_t err)
 		return "Handle initialization failed";
 	case PW_ERR_INIT_DIR:
 		return "Failed to setup powaur_dir";
-	case PW_ERR_INIT_LOCAL_DB:
+	case PW_ERR_INIT_LOCALDB:
 		return "Failed to initialize local db";
 	
 	/* Command parsing errors */
@@ -26,6 +72,8 @@ const char *pw_strerror(enum _pw_errno_t err)
 		return "Unknown option";
 	case PW_ERR_OP_MULTI:
 		return "Multiple operations not allowed";
+	case PW_ERR_OP_NULL:
+		return "no operation specified (use -h for help)";
 
 	case PW_ERR_PM_CONF_OPEN:
 		return "Error opening /etc/pacman.conf";
@@ -34,7 +82,7 @@ const char *pw_strerror(enum _pw_errno_t err)
 	
 	/* Fatal errors */
 	case PW_ERR_ACCESS:
-		return "Insufficient permissions to write to directory";
+		return "Insufficient permissions to write to directory %s";
 
 	/* libalpm errors */
 	case PW_ERR_ALPM_RELOAD:
@@ -47,24 +95,30 @@ const char *pw_strerror(enum _pw_errno_t err)
 	/* General errors */
 	case PW_ERR_MEMORY:
 		return "Memory allocation error";
+
+	/* Path related errors */
 	case PW_ERR_GETCWD:
 		return "Error getting CWD";
 	case PW_ERR_RESTORECWD:
 		return "Error restoring CWD";
+	case PW_ERR_CHDIR:
+		return "Error changing dir to %s";
+	case PW_ERR_PATH_RESOLVE:
+		return "Failed to resolve path: %s";
+
+	/* File related errors */
 	case PW_ERR_ISDIR:
-		return "Writing to an existing directory";
+		return "Name clash with existing directory \"%s\"";
 	case PW_ERR_FOPEN:
-		return "Error opening file";
+		return "Error opening file %s";
 	case PW_ERR_FILE_EXTRACT:
 		return "File extraction failed";
 	case PW_ERR_OPENDIR:
 		return "Failed to open directory";
 	case PW_ERR_STAT:
-		return "Failed to stat file/directory";
-	case PW_ERR_PATH_RESOLVE:
-		return "Failed to resolve path";
+		return "Failed to stat %s";
 
-	/* fork errors */
+	/* Fork errors */
 	case PW_ERR_FORK_FAILED:
 		return "Forking of process failed";
 	case PW_ERR_WAITPID_FAILED:
@@ -94,7 +148,7 @@ const char *pw_strerror(enum _pw_errno_t err)
 
 	/* Search errors */
 	case PW_ERR_TARGETS_NULL:
-		return "No target packages";
+		return "No package specified for %s";
 
 	default:
 		return "Unknown error";

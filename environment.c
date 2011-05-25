@@ -8,6 +8,7 @@
 #include "conf.h"
 #include "environment.h"
 #include "util.h"
+#include "wrapper.h"
 
 struct config_t *config;
 
@@ -43,7 +44,9 @@ struct commonstrings comstrs = {
 int setup_config(void)
 {
 	config = config_init();
-	ASSERT(config != NULL, RET_ERR(PW_ERR_INIT_CONFIG, -1));
+	if (!config) {
+		return error(PW_ERR_INIT_CONFIG);
+	}
 
 	return 0;
 }
@@ -61,20 +64,20 @@ static int setup_pacman_environment(int reload)
 	if (parse_pmconfig()) {
 		/* Free cachedirs */
 		FREELIST(pacman_cachedirs);
-		RET_ERR(PW_ERR_PM_CONF_PARSE, -1);
+		return error(PW_ERR_PM_CONF_PARSE);
 	}
 
 	if (!pacman_rootdir) {
-		STRDUP(pacman_rootdir, PACMAN_DEF_ROOTDIR, RET_ERR(PW_ERR_MEMORY, -1));
+		pacman_rootdir = xstrdup(PACMAN_DEF_ROOTDIR);
 	}
 
 	if (!pacman_dbpath) {
-		STRDUP(pacman_dbpath, PACMAN_DEF_DBPATH, RET_ERR(PW_ERR_MEMORY, -1));
+		pacman_dbpath = xstrdup(PACMAN_DEF_DBPATH);
 	}
 
 	if (!pacman_cachedirs) {
 		pacman_cachedirs = alpm_list_add(pacman_cachedirs,
-										 strdup(PACMAN_DEF_CACHEDIR));
+										 xstrdup(PACMAN_DEF_CACHEDIR));
 	}
 
 	alpm_option_set_root(pacman_rootdir);
@@ -146,13 +149,13 @@ cleanup:
 
 	/* Use default settings for unspecified options */
 	if (!powaur_dir) {
-		STRDUP(powaur_dir, PW_DEF_DIR, RET_ERR(PW_ERR_MEMORY, -1));
+		powaur_dir = xstrdup(PW_DEF_DIR);
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default directory %s\n",
 				  comstrs.tab, powaur_dir);
 	}
 
 	if (!powaur_editor) {
-		STRDUP(powaur_editor, PW_DEF_EDITOR, RET_ERR(PW_ERR_MEMORY, -1));
+		powaur_editor = xstrdup(PW_DEF_EDITOR);
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default editor %s\n",
 				  comstrs.tab, powaur_editor);
 	}

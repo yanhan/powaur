@@ -31,10 +31,10 @@ POWAUR-VERSION-FILE: FORCE
 -include POWAUR-VERSION-FILE
 
 SRC=conf.c curl.c download.c environment.c error.c handle.c json.c package.c \
-	powaur.c query.c sync.c util.c
+	powaur.c query.c sync.c wrapper.c util.c
 
 HDRS=conf.h curl.h download.h environment.h error.h handle.h json.h package.h \
-	 powaur.h query.h sync.h util.h
+	 powaur.h query.h sync.h wrapper.h util.h
 
 OBJS=$(SRC:.c=.o)
 
@@ -51,16 +51,16 @@ powaur.o: powaur.c POWAUR-VERSION-GEN
 
 powaur.o: EXTRA_CPPFLAGS = -DPOWAUR_VERSION='"$(POWAUR_VERSION)"'
 
-$(OBJS): environment.h powaur.h util.h
+$(OBJS): error.h environment.h powaur.h util.h
 conf.o environment.o query.o: conf.h
 download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
-error.o util.o: error.h
 handle.o json.o powaur.o: handle.h
 handle.o powaur.o sync.o: json.h
 query.o powaur.o sync.o: package.h
 json.o query.o: query.h
 powaur.o sync.o: sync.h
+conf.o environment.o handle.o package.o util.o wrapper.o: wrapper.h
 
 install: all
 	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)

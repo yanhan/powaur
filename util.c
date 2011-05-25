@@ -19,7 +19,7 @@
 #include "powaur.h"
 #include "util.h"
 
-int pw_printf(enum pwloglevel_t lvl, char *fmt, ...)
+int pw_printf(enum pwloglevel_t lvl, const char *fmt, ...)
 {
 	int ret;
 	va_list ap;
@@ -31,7 +31,7 @@ int pw_printf(enum pwloglevel_t lvl, char *fmt, ...)
 	return ret;
 }
 
-int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, ...)
+int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
 {
 	int ret;
 	va_list ap;
@@ -43,7 +43,7 @@ int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, ...)
 	return ret;
 }
 
-int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, va_list ap)
+int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
 {
 	int ret = 0;
 	va_list copy_list;
@@ -87,7 +87,9 @@ int extract_file(const char *filename)
 	int extract_flags = ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_TIME;
 
 	archive = archive_read_new();
-	ASSERT(archive != NULL, RET_ERR(PW_ERR_ARCHIVE_CREATE, -1));
+	if (!archive) {
+		return error(PW_ERR_ARCHIVE_CREATE);
+	}
 
 	archive_read_support_compression_all(archive);
 	archive_read_support_format_all(archive);
@@ -95,7 +97,7 @@ int extract_file(const char *filename)
 									 ARCHIVE_DEFAULT_BYTES_PER_BLOCK);
 
 	if (ret != ARCHIVE_OK) {
-		RET_ERR(PW_ERR_ARCHIVE_OPEN, -1);
+		return error(PW_ERR_ARCHIVE_OPEN);
 	}
 
 	while (archive_read_next_header(archive, &entry) == ARCHIVE_OK) {
@@ -174,13 +176,13 @@ int wait_or_whine(pid_t pid, char *argv0)
 		;
 
 	if (waiting < 0) {
-		RET_ERR(PW_ERR_WAITPID_FAILED, -1);
+		return error(PW_ERR_WAITPID_FAILED);
 	} else if (waiting != pid) {
-		RET_ERR(PW_ERR_WAITPID_CONFUSED, -1);
+		return error(PW_ERR_WAITPID_CONFUSED);
 	} else if (WIFSIGNALED(status)) {
 		ret = WTERMSIG(status);
-		RET_ERR(PW_ERR_WAITPID_SIGNAL, -1);
 		ret -= 127;
+		RET_ERR(PW_ERR_WAITPID_SIGNAL, ret);
 	} else if (WIFEXITED(status)) {
 		ret = WEXITSTATUS(status);
 
@@ -191,7 +193,7 @@ int wait_or_whine(pid_t pid, char *argv0)
 		}
 
 	} else {
-		RET_ERR(PW_ERR_WAITPID_CONFUSED, -1);
+		return error(PW_ERR_WAITPID_CONFUSED);
 	}
 
 	return ret;
@@ -468,7 +470,8 @@ char *have_dotinstall(void)
 
 	fp = fopen("PKGBUILD", "r");
 	if (!fp) {
-		RET_ERR(PW_ERR_FOPEN, NULL);
+		error(PW_ERR_FOPEN, "PKGBUILD");
+		return NULL;
 	}
 
 	while (str = fgets(buf, PATH_MAX, fp)) {
@@ -569,7 +572,7 @@ static int write_dir_archive(char *dirname, struct archive *a)
 
 	dirp = opendir(dirname);
 	if (!dirp) {
-		RET_ERR_VOID(PW_ERR_OPENDIR);
+		return error(PW_ERR_OPENDIR);
 	}
 
 	while (dir_entry = readdir(dirp)) {
@@ -652,7 +655,7 @@ int powaur_backup(alpm_list_t *targets)
 
 	a = archive_write_new();
 	if (!a) {
-		RET_ERR(PW_ERR_ARCHIVE_CREATE, -1);
+		return error(PW_ERR_ARCHIVE_CREATE);
 	}
 
 	archive_write_set_compression_bzip2(a);
@@ -677,26 +680,26 @@ int powaur_backup(alpm_list_t *targets)
 	}
 
 	if (!getcwd(cwd, PATH_MAX)) {
-		PW_SETERRNO(PW_ERR_GETCWD);
+		error(PW_ERR_GETCWD);
 		ret = -1;
 		goto cleanup;
 	}
 
 	if (ret = chdir(pacman_dbpath)) {
-		PW_SETERRNO(PW_ERR_CHDIR);
+		error(PW_ERR_CHDIR, pacman_dbpath);
 		goto restore_cwd;
 	}
 
 	/* Create entry for the current directory. */
 	entry = archive_entry_new();
 	if (!entry) {
-		PW_SETERRNO(PW_ERR_ARCHIVE_ENTRY);
+		error(PW_ERR_ARCHIVE_ENTRY);
 		goto restore_cwd;
 	}
 
 	snprintf(localdb, PATH_MAX, "%s", "local");
 	if (ret = stat(localdb, &st)) {
-		PW_SETERRNO(PW_ERR_STAT);
+		error(PW_ERR_STAT, localdb);
 		goto free_entry;
 	}
 

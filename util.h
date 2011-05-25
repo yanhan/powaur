@@ -11,16 +11,17 @@
 #include "error.h"
 #include "powaur.h"
 #include "environment.h"
+#include "wrapper.h"
 
 int powaur_backup(alpm_list_t *targets);
 
-int pw_printf(enum pwloglevel_t lvl, char *fmt, ...)
+int pw_printf(enum pwloglevel_t lvl, const char *fmt, ...)
 __attribute__((format (printf, 2, 3)));
 
-int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, ...)
+int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
 __attribute__((format (printf, 3, 4)));
 
-int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, char *fmt, va_list ap)
+int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
 __attribute__((format (printf, 3, 0)));
 
 int extract_file(const char *filename);
@@ -73,7 +74,7 @@ alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 } while (0)
 
 #define CALLOC(myptr, nmemb, mysz, act) do {\
-	myptr = calloc(nmemb, mysz);\
+	myptr = xcalloc(nmemb, mysz);\
 	if (!myptr) {\
 		act;\
 	}\

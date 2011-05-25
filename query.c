@@ -77,7 +77,9 @@ static int query_search(pmdb_t *localdb, const char *pkgname)
 int powaur_query(alpm_list_t *targets)
 {
 	pmdb_t *localdb = alpm_option_get_localdb();
-	ASSERT(localdb != NULL, RET_ERR(PW_ERR_INIT_LOCAL_DB, -1));
+	if (!localdb) {
+		return error(PW_ERR_INIT_LOCALDB);
+	}
 
 	alpm_list_t *dblist = NULL;
 	alpm_list_t *i, *j, *dbcache;

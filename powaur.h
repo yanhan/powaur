@@ -41,11 +41,12 @@ enum _pw_errno_t {
 	PW_ERR_INIT_ENV,
 	PW_ERR_INIT_HANDLE,
 	PW_ERR_INIT_DIR,
-	PW_ERR_INIT_LOCAL_DB,
+	PW_ERR_INIT_LOCALDB,
 
 	/* Command parsing errors */
 	PW_ERR_OP_UNKNOWN,
 	PW_ERR_OP_MULTI,
+	PW_ERR_OP_NULL,
 
 	/* /etc/pacman.conf parsing errors */
 	PW_ERR_PM_CONF_OPEN,
@@ -61,15 +62,19 @@ enum _pw_errno_t {
 
 	/* General errors */
 	PW_ERR_MEMORY,
+
+	/* Path related errors */
 	PW_ERR_GETCWD,
-	PW_ERR_CHDIR,
 	PW_ERR_RESTORECWD,
+	PW_ERR_CHDIR,
+	PW_ERR_PATH_RESOLVE,
+
+	/* File related errors */
 	PW_ERR_ISDIR,
 	PW_ERR_FOPEN,
 	PW_ERR_FILE_EXTRACT,
 	PW_ERR_OPENDIR,
 	PW_ERR_STAT,
-	PW_ERR_PATH_RESOLVE,
 
 	/* Fork errors */
 	PW_ERR_FORK_FAILED,

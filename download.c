@@ -17,7 +17,9 @@ int download_single_file(const char *url, FILE *fp)
 
 	/* Must do this here since this function is shared */
 	curl_init();
-	ASSERT(curl != NULL, RET_ERR(PW_ERR_CURL_INIT, -1));
+	if (!curl) {
+		return error(PW_ERR_CURL_INIT);
+	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -68,13 +70,11 @@ int download_single_package(const char *pkgname, alpm_list_t **failed_packages)
 
 		switch (errno) {
 		case EACCES:
-			PW_SETERRNO(PW_ERR_ACCESS);
-			break;
+			return error(PW_ERR_ACCESS, getcwd(filename, PATH_MAX));
 		case EISDIR:
-			PW_SETERRNO(PW_ERR_ISDIR);
-			break;
+			return error(PW_ERR_ISDIR, getcwd(filename, PATH_MAX));
 		default:
-			PW_SETERRNO(PW_ERR_FOPEN);
+			return error(PW_ERR_ACCESS, filename);
 		}
 
 		ret = -1;
@@ -86,7 +86,7 @@ int download_single_package(const char *pkgname, alpm_list_t **failed_packages)
 	ret = download_single_file(url, fp);
 
 cleanup:
-	FCLOSE(fp);
+	fclose(fp);
 
 	if (!ret) {
 		pw_printf(PW_LOG_INFO, "Downloaded %s\n", filename);
@@ -150,23 +150,29 @@ int powaur_get(alpm_list_t *targets)
 
 	failed_packages = resolve = new_resolve = NULL;
 
-	ASSERT(targets != NULL, RET_ERR(PW_ERR_TARGETS_NULL, -1));
+	if (!targets) {
+		return error(PW_ERR_TARGETS_NULL, "-G");
+	}
 
 	curl_init();
-	ASSERT(curl != NULL, RET_ERR(PW_ERR_CURL_INIT, -1));
+	if (!curl) {
+		return error(PW_ERR_CURL_INIT);
+	}
 
 	/* Check for --target */
 	if (config->target_dir) {
 		if (!realpath(config->target_dir, dirpath)) {
-			RET_ERR(PW_ERR_PATH_RESOLVE, -1);
+			return error(PW_ERR_PATH_RESOLVE, config->target_dir);
 		}
 
 		if (chdir(dirpath)) {
-			RET_ERR(PW_ERR_CHDIR, -1);
+			return error(PW_ERR_CHDIR, dirpath);
 		}
-
-		pw_printf(PW_LOG_INFO, "Downloading files to %s\n", dirpath);
+	} else {
+		getcwd(dirpath, PATH_MAX);
 	}
+
+	pw_printf(PW_LOG_INFO, "Downloading files to %s\n", dirpath);
 
 	for (i = targets; i; i = i->next) {
 		pwerrno = 0;

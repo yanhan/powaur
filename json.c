@@ -5,6 +5,7 @@
 
 #include "curl.h"
 #include "environment.h"
+#include "error.h"
 #include "handle.h"
 #include "json.h"
 #include "powaur.h"
@@ -19,7 +20,9 @@ yajl_handle yajl_init(void)
 	pwhandle->json_ctx->jsondepth = 0;
 
 	yajl_handle yajl_hand = yajl_alloc(yajl_cbs, NULL, pwhandle->json_ctx);
-	ASSERT(yajl_hand != NULL, RET_ERR(PW_ERR_MEMORY, NULL));
+	if (!yajl_hand) {
+		die_errno(PW_ERR_MEMORY);
+	}
 
 	return yajl_hand;
 }
@@ -38,13 +41,9 @@ alpm_list_t *query_aur(const char *searchstr, enum aurquery_t query_type)
 	long httpresp;
 
 	curl_init();
-	ASSERT(curl != NULL, RET_ERR(PW_ERR_CURL_INIT, NULL));
-
 	hand = yajl_init();
-	ASSERT(hand != NULL, RET_ERR(PW_ERR_MEMORY, NULL));
 
 	/* Query AUR */
-	curl_easy_reset(curl);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, parse_json);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, hand);
 

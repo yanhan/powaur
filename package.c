@@ -11,11 +11,12 @@
 #include "package.h"
 #include "powaur.h"
 #include "util.h"
+#include "wrapper.h"
 
 struct aurpkg_t *aurpkg_new(void)
 {
 	struct aurpkg_t *pkg;
-	CALLOC(pkg, 1, sizeof(struct aurpkg_t), RET_ERR(PW_ERR_MEMORY, NULL));
+	pkg = xcalloc(1, sizeof(struct aurpkg_t));
 	return pkg;
 }
 
@@ -25,14 +26,14 @@ void aurpkg_free(struct aurpkg_t *pkg)
 		return;
 	}
 
-	FREE(pkg->id);
-	FREE(pkg->name);
-	FREE(pkg->version);
-	FREE(pkg->category);
-	FREE(pkg->desc);
-	FREE(pkg->url);
-	FREE(pkg->urlpath);
-	FREE(pkg->license);
+	free(pkg->id);
+	free(pkg->name);
+	free(pkg->version);
+	free(pkg->category);
+	free(pkg->desc);
+	free(pkg->url);
+	free(pkg->urlpath);
+	free(pkg->license);
 
 	FREELIST(pkg->arch);
 	FREELIST(pkg->conflicts);
@@ -59,8 +60,7 @@ int aurpkg_vote_cmp(const void *a, const void *b)
 struct pkginfo_t *pkginfo_new(const char *name, const char *ver, time_t d)
 {
 	struct pkginfo_t *info;
-	CALLOC(info, 1, sizeof(struct pkginfo_t), RET_ERR(PW_ERR_MEMORY,NULL));
-
+	info = xcalloc(1, sizeof(struct pkginfo_t));
 	info->name = strdup(name);
 	info->version = strdup(ver);
 	info->install_date = d;
@@ -354,7 +354,10 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 	struct stat st;
 
 	localdb = alpm_option_get_localdb();
-	ASSERT(localdb != NULL, RET_ERR(PW_ERR_LOCALDB_NULL, NULL));
+	if (!localdb) {
+		error(PW_ERR_LOCALDB_NULL);
+		return NULL;
+	}
 
 	newdeps = NULL;
 	dbcache = alpm_db_get_pkgcache(localdb);

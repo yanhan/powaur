@@ -193,15 +193,15 @@ static int install_single_package(char *pkgname)
 
 	ret = extract_file(buf);
 	if (ret) {
-		RET_ERR(PW_ERR_FILE_EXTRACT, -1);
+		return error(PW_ERR_FILE_EXTRACT);
 	}
 
 	if (!getcwd(cwd, PATH_MAX)) {
-		RET_ERR(PW_ERR_GETCWD, -1);
+		return error(PW_ERR_GETCWD);
 	}
 
 	if (chdir(pkgname)) {
-		RET_ERR(PW_ERR_CHDIR, -1);
+		return error(PW_ERR_CHDIR, pkgname);
 	}
 
 	/* Ask user to edit PKGBUILD */
@@ -219,7 +219,7 @@ static int install_single_package(char *pkgname)
 	/* Fork editor */
 	pid = fork();
 	if (pid == (pid_t) -1) {
-		RET_ERR(PW_ERR_FORK_FAILED, -1);
+		return error(PW_ERR_FORK_FAILED);
 	} else if (pid == 0) {
 		/* Open editor */
 		execlp(powaur_editor, powaur_editor, "PKGBUILD", NULL);
@@ -247,7 +247,7 @@ edit_dotinstall:
 
 		pid = fork();
 		if (pid == (pid_t) - 1) {
-			RET_ERR(PW_ERR_FORK_FAILED, -1);
+			return error(PW_ERR_FORK_FAILED);
 		} else if (pid == 0) {
 			execlp(powaur_editor, powaur_editor, dotinstall, NULL);
 		} else {
@@ -268,7 +268,7 @@ fork_pacman:
 
 	pid = fork();
 	if (pid == (pid_t) -1) {
-		RET_ERR(PW_ERR_FORK_FAILED, -1);
+		return error(PW_ERR_FORK_FAILED);
 	} else if (pid == 0) {
 		/* Install using pacman */
 		execlp("makepkg", "makepkg", "-si", NULL);
@@ -394,11 +394,11 @@ static int sync_info(alpm_list_t *targets)
 	struct aurpkg_t *pkg;
 
 	if (!getcwd(cwd, PATH_MAX)) {
-		RET_ERR(PW_ERR_GETCWD, -1);
+		return error(PW_ERR_GETCWD);
 	}
 
 	if (chdir(powaur_dir)) {
-		RET_ERR(PW_ERR_CHDIR, -1);
+		return error(PW_ERR_CHDIR, powaur_dir);
 	}
 
 	found = ret = pkgcount = 0;
@@ -429,13 +429,13 @@ static int sync_info(alpm_list_t *targets)
 		fd = mkstemp(filename);
 
 		if (fd < 0) {
-			PW_SETERRNO(PW_ERR_FOPEN);
+			error(PW_ERR_FOPEN, filename);
 			goto garbage_collect;
 		}
 
 		fp = fdopen(fd, "w+");
 		if (!fp) {
-			PW_SETERRNO(PW_ERR_FOPEN);
+			error(PW_ERR_FOPEN, filename);
 			goto garbage_collect;
 		}
 
@@ -497,7 +497,7 @@ cleanup:
 	alpm_list_free(free_list);
 
 	if (chdir(cwd)) {
-		RET_ERR(PW_ERR_RESTORECWD, -1);
+		return error(PW_ERR_RESTORECWD);
 	}
 
 	return found ? 0 : -1;
@@ -553,11 +553,11 @@ int powaur_sync(alpm_list_t *targets)
 
 	/* Save our current directory */
 	if (!getcwd(orgdir, PATH_MAX)) {
-		RET_ERR(PW_ERR_GETCWD, -1);
+		return error(PW_ERR_GETCWD);
 	}
 
 	if (ret = chdir(powaur_dir)) {
-		PW_SETERRNO(PW_ERR_CHDIR);
+		error(PW_ERR_CHDIR, powaur_dir);
 		goto cleanup;
 	}
 

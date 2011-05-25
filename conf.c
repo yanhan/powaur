@@ -10,11 +10,12 @@
 #include "environment.h"
 #include "powaur.h"
 #include "util.h"
+#include "wrapper.h"
 
 struct config_t *config_init(void)
 {
 	struct config_t *conf;
-	CALLOC(conf, 1, sizeof(struct config_t), RET_ERR(PW_ERR_MEMORY, NULL));
+	conf = xcalloc(1, sizeof(struct config_t));
 	conf->op = PW_OP_MAIN;
 	conf->loglvl = PW_LOG_NORM | PW_LOG_INFO | PW_LOG_WARNING | PW_LOG_ERROR;
 
@@ -306,7 +307,9 @@ int parse_pmconfig(void)
 	int parsed_options = 0;
 
 	fp = fopen(comstrs.pmconf, "r");
-	ASSERT(fp != NULL, RET_ERR(PW_ERR_PM_CONF_OPEN, -1));
+	if (!fp) {
+		return error(PW_ERR_PM_CONF_OPEN);
+	}
 
 	pw_printf(PW_LOG_DEBUG, "%s : Parsing %s\n", __func__, comstrs.pmconf);
 

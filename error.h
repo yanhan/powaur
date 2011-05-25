@@ -3,6 +3,10 @@
 
 #include "powaur.h"
 
+int error(enum _pw_errno_t err, ...);
+void die(const char *msg, ...);
+void die_errno(enum _pw_errno_t err, ...);
+
 const char *pw_strerror(enum _pw_errno_t err);
 const char *pw_strerrorlast(void);
 

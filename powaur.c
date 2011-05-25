@@ -43,15 +43,17 @@ static int powaur_init(void)
 	}
 
 	if (setup_environment()) {
-		RET_ERR(PW_ERR_INIT_ENV, -1);
+		return error(PW_ERR_INIT_ENV);
 	}
 
 	pwhandle = _pwhandle_init();
-	ASSERT(pwhandle != NULL, RET_ERR(PW_ERR_INIT_HANDLE, -1));
+	if (!pwhandle) {
+		return error(PW_ERR_INIT_HANDLE);
+	}
 
 	if (stat(powaur_dir, &st) != 0) {
 		if (mkdir(powaur_dir, 0755)) {
-			RET_ERR(PW_ERR_INIT_DIR, -1);
+			return error(PW_ERR_INIT_DIR);
 		}
 	}
 
@@ -260,22 +262,20 @@ static int parseargs(int argc, char *argv[])
 		} else if (opt == 0) {
 			continue;
 		} else if (opt == '?') {
-			RET_ERR(PW_ERR_OP_UNKNOWN, -1);
+			return error(PW_ERR_OP_UNKNOWN);
 		}
 
 		parsearg_op(opt, 0);
 	}
 
 	if (config->op == PW_OP_INVAL) {
-		RET_ERR(PW_ERR_OP_MULTI, -1);
+		return error(PW_ERR_OP_MULTI);
 	} else if (config->version) {
 		version();
 	} else if (config->help) {
 		usage(config->op);
 	} else if (config->op == PW_OP_MAIN) {
-		pw_fprintf(PW_LOG_ERROR, stderr,
-				   "no operation specified (use -h for help)\n");
-		return -1;
+		return error(PW_ERR_OP_NULL);
 	}
 
 	/* Parse remaining arguments */
@@ -287,7 +287,7 @@ static int parseargs(int argc, char *argv[])
 			break;
 			continue;
 		} else if (opt == '?') {
-			RET_ERR(PW_ERR_OP_UNKNOWN, -1);
+			return error(PW_ERR_OP_UNKNOWN);
 		} else if (parsearg_op(opt, 1) == 0) {
 			/* Operation */
 			continue;
@@ -315,7 +315,7 @@ static int parseargs(int argc, char *argv[])
 		/* Parse global options */
 		res = parsearg_global(opt);
 		if (res != 0) {
-			RET_ERR(PW_ERR_OP_UNKNOWN, -1);
+			return error(PW_ERR_OP_UNKNOWN);
 		}
 	}
 
