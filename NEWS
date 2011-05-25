@@ -1,0 +1,6 @@
+VERSION         DESCRIPTION
+----------------------------------------------------------------------
+0.1.1         - -G flag now resolves dependencies
+              - Removed unsuccessfully downloaded packages
+			  - Add verbose flag
+0.1           - Initial release

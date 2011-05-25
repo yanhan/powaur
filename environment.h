@@ -17,7 +17,6 @@
 #define AUR_RPC_TYPE_SEARCH "search"
 
 /* powaur defaults */
-#define PW_VERSION "0.1"
 #define PW_DEF_DIR "/tmp/powaur/"
 #define PW_DEF_EDITOR "vim"
 #define PW_CONF "powaur.conf"

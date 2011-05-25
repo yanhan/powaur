@@ -121,7 +121,7 @@ cleanup:
 
 static void version()
 {
-	printf("powaur %s\n", PW_VERSION);
+	printf("powaur %s\n", POWAUR_VERSION);
 	powaur_cleanup(0);
 }
 

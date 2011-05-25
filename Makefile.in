@@ -6,6 +6,7 @@ CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 ALL_CFLAGS=$(CFLAGS)
 ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl
+EXTRA_CPPFLAGS=
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -38,12 +39,17 @@ HDRS=conf.h curl.h download.h environment.h error.h handle.h json.h package.h \
 OBJS=$(SRC:.c=.o)
 
 DIST_FILES=$(SRC) $(HDRS) POWAUR-VERSION-GEN configure config.h.in Makefile.in \
-		   powaur.1.txt powaur.conf COPYING INSTALL README TECHNICAL
+		   powaur.1.txt powaur.conf COPYING INSTALL NEWS README TECHNICAL
 
 all:: powaur
 
 powaur: $(OBJS)
 	$(CC) $(OBJS) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS)
+
+powaur.o: powaur.c POWAUR-VERSION-GEN
+	$(CC) -o $@ -c $(ALL_CFLAGS) $(EXTRA_CPPFLAGS) $<
+
+powaur.o: EXTRA_CPPFLAGS = -DPOWAUR_VERSION='"$(POWAUR_VERSION)"'
 
 $(OBJS): environment.h powaur.h util.h
 conf.o environment.o query.o: conf.h
