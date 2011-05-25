@@ -1,12 +1,11 @@
 #include "curl.h"
 #include "util.h"
 
-static int initialized = 0;
 CURL *curl = NULL;
 
 void curl_init(void)
 {
-	if (!initialized) {
+	if (!curl) {
 		curl_global_init(CURL_GLOBAL_ALL);
 		curl = curl_easy_init();
 
@@ -15,10 +14,7 @@ void curl_init(void)
 			return;
 		}
 
-		initialized = 1;
-	}
-
-	if (curl) {
+	} else {
 		curl_easy_reset(curl);
 
 		/* Set timeout */
@@ -29,8 +25,9 @@ void curl_init(void)
 
 void curl_cleanup(void)
 {
-	if (initialized) {
+	if (curl) {
 		curl_easy_cleanup(curl);
 		curl_global_cleanup();
+		curl = NULL;
 	}
 }
