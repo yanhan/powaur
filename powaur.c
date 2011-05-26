@@ -108,6 +108,7 @@ static void usage(unsigned short op)
 		case PW_OP_GET:
 			printf("      --target <DIR>         downloads to alternate directory DIR\n");
 			printf("      --deps                 resolves dependencies\n");
+			printf("      --threads <N>          limit max no. of threads to N\n");
 			break;
 		case PW_OP_MAINTAINER:
 			printf("      --vote                 order search results by votes\n");
