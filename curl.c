@@ -5,12 +5,14 @@
 
 static int initialized = 0;
 
-void curl_init(void)
+int curl_init(void)
 {
 	if (!initialized) {
 		curl_global_init(CURL_GLOBAL_ALL);
 		initialized = 1;
 	}
+
+	return !initialized;
 }
 
 void curl_cleanup(void)

@@ -24,7 +24,6 @@ static alpm_list_t *powaur_targets = NULL;
 static int powaur_cleanup(int ret)
 {
 	FREELIST(powaur_targets);
-
 	curl_cleanup();
 	_pwhandle_free(pwhandle);
 	cleanup_environment();
@@ -57,7 +56,10 @@ static int powaur_init(void)
 		}
 	}
 
-	curl_init();
+	if (curl_init()) {
+		return error(PW_ERR_CURL_INIT);
+	}
+
 	return ret;
 }
 
