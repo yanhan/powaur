@@ -17,8 +17,7 @@ enum {
 	OPT_VERBOSE,
 	OPT_TARGET_DIR,
 	OPT_RESOLVE_DEPS,
-	SEARCH_OR,
-	SEARCH_AND
+	OPT_MAXTHREADS,
 };
 
 enum pwloglevel_t {

@@ -15,7 +15,7 @@ struct config_t *config;
 enum _pw_errno_t pwerrno = PW_ERR_OK;
 char *powaur_dir;
 char *powaur_editor;
-int powaur_maxthreads = PW_DEF_MAXTHREADS;
+int powaur_maxthreads;
 
 /* Pacman configuration */
 char *pacman_rootdir;
@@ -116,14 +116,9 @@ static int setup_powaur_config(void)
 			}
 
 			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", comstrs.tab, buf);
-			ret = parse_powaur_config(fp);
+			parse_powaur_config(fp);
 			fclose(fp);
-
-			if (ret != -1) {
-				goto cleanup;
-			} else {
-				goto check_home;
-			}
+			goto cleanup;
 		}
 	}
 
@@ -140,9 +135,8 @@ check_home:
 			}
 
 			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", comstrs.tab, buf);
-			ret = parse_powaur_config(fp);
+			(fp);
 			fclose(fp);
-			goto cleanup;
 		}
 	}
 
@@ -160,6 +154,14 @@ cleanup:
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default editor %s\n",
 				  comstrs.tab, powaur_editor);
 	}
+
+	if (powaur_maxthreads <= 0 || powaur_maxthreads > PW_DEF_MAXTHREADS) {
+		powaur_maxthreads = PW_DEF_MAXTHREADS;
+	}
+
+	config->maxthreads = powaur_maxthreads;
+	pw_printf(PW_LOG_DEBUG, "%sMaximum no. of threads = %d\n", comstrs.tab,
+			  config->maxthreads);
 
 	return 0;
 }

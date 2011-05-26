@@ -18,7 +18,6 @@ struct config_t *config_init(void)
 	conf = xcalloc(1, sizeof(struct config_t));
 	conf->op = PW_OP_MAIN;
 	conf->loglvl = PW_LOG_NORM | PW_LOG_INFO | PW_LOG_WARNING | PW_LOG_ERROR;
-	conf->max_threads = PW_DEF_MAXTHREADS;
 
 	return conf;
 }
@@ -31,17 +30,13 @@ void config_free(struct config_t *conf)
 	}
 }
 
-/* fp is guaranteed to be non-NULL.
- * returns 0 on success, -1 on failure, 1 if not all options specified
+/* fp is assumed to be valid.
  */
-int parse_powaur_config(FILE *fp)
+void parse_powaur_config(FILE *fp)
 {
-	int ret, parsed;
 	char buf[PATH_MAX];
 	char *line, *key, *val;
 	size_t len;
-
-	ret = parsed = 0;
 
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
@@ -65,56 +60,38 @@ int parse_powaur_config(FILE *fp)
 
 		if (!strcmp(key, "Editor")) {
 			if (powaur_editor) {
-				pw_fprintf(PW_LOG_ERROR, stderr, "%s%sRepeated Editor option!\n",
-						   comstrs.tab, comstrs.tab);
-				ret = -1;
-				goto cleanup;
+				free(powaur_editor);
 			}
 
-			powaur_editor = strdup(val);
-			if (!powaur_editor) {
-				ret = -1;
-				goto cleanup;
-			}
-
-			++parsed;
+			powaur_editor = xstrdup(val);
 			pw_printf(PW_LOG_DEBUG, "%s%sParsed Editor = %s\n", comstrs.tab,
 					  comstrs.tab, powaur_editor);
 
 		} else if (!strcmp(key, "TmpDir")) {
 			if (powaur_dir) {
-				pw_fprintf(PW_LOG_ERROR, stderr, "%s%sRepeated TmpDir option!\n",
-						   comstrs.tab, comstrs.tab);
-				ret = -1;
-				goto cleanup;
+				free(powaur_dir);
 			}
 
-			powaur_dir = strdup(val);
-			if (!powaur_dir) {
-				ret = -1;
-				goto cleanup;
-			}
-
-			++parsed;
+			powaur_dir = xstrdup(val);
 			pw_printf(PW_LOG_DEBUG, "%s%sParsed TmpDir = %s\n", comstrs.tab,
 					  comstrs.tab, powaur_dir);
+
+		} else if (!strcmp(key, "MaxThreads")) {
+			if (config->opt_maxthreads) {
+				pw_printf(PW_LOG_DEBUG, "%s%s--threads = %d, overriding config\n",
+						  comstrs.tab, comstrs.tab, powaur_maxthreads);
+				continue;
+			}
+
+			powaur_maxthreads = atoi(val);
+			pw_printf(PW_LOG_DEBUG, "%s%sParsed MaxThreads = %d\n", comstrs.tab,
+					  comstrs.tab, powaur_maxthreads);
+
+			if (powaur_maxthreads < 1 || powaur_maxthreads > PW_DEF_MAXTHREADS) {
+				powaur_maxthreads = 0;
+			}
 		}
 	}
-
-cleanup:
-
-	if (ret) {
-		if (!parsed) {
-			free(powaur_editor);
-			free(powaur_dir);
-			powaur_editor = powaur_dir = NULL;
-			return -1;
-		} else {
-			return 1;
-		}
-	}
-
-	return 0;
 }
 
 static void parse_pmoption_keyval(int *flag, int *flag_com, char *line,

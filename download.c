@@ -184,7 +184,7 @@ static void threadpool_dl_extract(alpm_list_t *targets)
 	void *placeholder;
 
 	num_threads = alpm_list_count(targets);
-	num_threads = num_threads > config->max_threads ? config->max_threads : num_threads;
+	num_threads = num_threads > config->maxthreads ? config->maxthreads : num_threads;
 
 	pw_jobq = targets;
 

@@ -49,6 +49,11 @@ Displays version information and exits.
 .TP
 .B "--debug"
 Display debug messages.
+.TP
+.B "--threads <N>"
+Limits powaur to spawn up to a maximum of N threads. Currently, mutli-threading
+is limited to the -G operation. This option can be used to override the
+"MaxThreads" setting in the configuration file.
 .SH GETPKGBUILD OPTIONS
 .TP
 .B "--deps"

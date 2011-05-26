@@ -4,13 +4,13 @@ WHAT IS POWAUR?
 powaur is an AUR helper written in C. Its main objective is to provide
 a yaourt / pacman esque interface to the AUR.
 
-Currently, powaur has a minimalistic feature set which allows you to:
+Currently, powaur supports:
 
-- Search for packages on the AUR
-- Query local and sync databases for package information
-- Download packages from the AUR (w/ dependency resolution)
-- Install packages from the AUR (no dependency resolution)
-- Backup your pacman local database
+- Multithreaded downloading of packages from the AUR with dependency resolution
+- Searching for packages on the AUR
+- Querying local and sync databases for package information
+- Installing packages from the AUR (no dependency resolution)
+- Backing up your pacman local database
 
 Unlike full featured AUR helpers such as clyde, powaur is not meant to
 replace pacman. 

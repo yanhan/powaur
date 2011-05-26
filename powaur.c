@@ -235,6 +235,10 @@ static int parsearg_global(int option)
 	case OPT_TARGET_DIR:
 		config->target_dir = strdup(optarg);
 		break;
+	case OPT_MAXTHREADS:
+		config->opt_maxthreads = 1;
+		powaur_maxthreads = atoi(optarg);
+		break;
 	default:
 		return -1;
 	}
@@ -266,9 +270,7 @@ static int parseargs(int argc, char *argv[])
 		{"verbose", no_argument, NULL, OPT_VERBOSE},
 		{"target", required_argument, NULL, OPT_TARGET_DIR},
 		{"deps", no_argument, NULL, OPT_RESOLVE_DEPS},
-
-		/*{"or", no_argument, NULL, SEARCH_OR},
-		{"and", no_argument, NULL, SEARCH_AND},*/
+		{"threads", required_argument, NULL, OPT_MAXTHREADS},
 		{0, 0, 0, 0}
 	};
 

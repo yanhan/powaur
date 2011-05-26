@@ -26,15 +26,16 @@ struct config_t {
 	/* Misc */
 	unsigned sort_votes: 1;
 	unsigned verbose: 1;
+	unsigned opt_maxthreads: 1;
 
 	char *target_dir;
-	int max_threads;
+	int maxthreads;
 };
 
 struct config_t *config_init(void);
 void config_free(struct config_t *conf);
 
-int parse_powaur_config(FILE *fp);
+void parse_powaur_config(FILE *fp);
 
 /* Briefly parse /etc/pacman.conf */
 int parse_pmconfig(void);
