@@ -5,7 +5,7 @@
 
 void curl_init(void);
 void curl_cleanup(void);
-
-extern CURL *curl;
+CURL *curl_easy_new(void);
+void curl_reset(CURL *curl);
 
 #endif

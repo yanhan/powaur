@@ -10,6 +10,7 @@
 #include "curl.h"
 #include "download.h"
 #include "environment.h"
+#include "error.h"
 #include "json.h"
 #include "package.h"
 #include "powaur.h"
@@ -321,7 +322,7 @@ static int install_packages(alpm_list_t *targets, alpm_list_t **success)
 }
 
 /* Search sync db for packages. Only works for 1 package now. */
-static int sync_search(alpm_list_t *targets)
+static int sync_search(CURL *curl, alpm_list_t *targets)
 {
 	alpm_list_t *i, *j, *search_results;
 	pmdb_t *db;
@@ -329,7 +330,7 @@ static int sync_search(alpm_list_t *targets)
 	struct aurpkg_t *pkg;
 	size_t listsz;
 
-	search_results = query_aur(targets->data, AUR_QUERY_SEARCH);
+	search_results = query_aur(curl, targets->data, AUR_QUERY_SEARCH);
 	if (search_results == NULL) {
 		printf("Sorry, no results for %s\n", targets->data);
 		return 0;
@@ -378,7 +379,7 @@ static pmpkg_t *search_syncdbs(alpm_list_t *dbs, const char *pkgname)
 }
 
 /* Lists detailed information about targets */
-static int sync_info(alpm_list_t *targets)
+static int sync_info(CURL *curl, alpm_list_t *targets)
 {
 	int found, ret, pkgcount;
 	alpm_list_t *i, *j, *results;
@@ -415,7 +416,7 @@ static int sync_info(alpm_list_t *targets)
 			continue;
 		}
 
-		results = query_aur(i->data, AUR_QUERY_INFO);
+		results = query_aur(curl, i->data, AUR_QUERY_INFO);
 		if (alpm_list_count(results) != 1) {
 			if (pkgcount > 0) {
 				printf("\n");
@@ -442,7 +443,7 @@ static int sync_info(alpm_list_t *targets)
 		snprintf(url, PATH_MAX, AUR_PKGBUILD_URL, i->data);
 
 		/* Download the PKGBUILD and parse it */
-		ret = download_single_file(url, fp);
+		ret = download_single_file(curl, url, fp);
 		if (ret) {
 			goto destroy_remnants;
 		}
@@ -514,13 +515,8 @@ int powaur_sync(alpm_list_t *targets)
 	alpm_list_t *nonzero_install, *success, *failure;
 	pmdb_t *localdb;
 	int ret, status;
-
-	freelist = NULL;
-	nonzero_install = org_installed = dl_failed = final_targets = NULL;
-	success = failure = NULL;
-	ret = status = 0;
-
 	char orgdir[PATH_MAX];
+	CURL *curl;
 
 	/* Makes no sense to run info and search tgt */
 	if (config->op_s_search && config->op_s_info) {
@@ -542,13 +538,23 @@ int powaur_sync(alpm_list_t *targets)
 		return ret;
 	}
 
+	freelist = NULL;
+	nonzero_install = org_installed = dl_failed = final_targets = NULL;
+	success = failure = NULL;
+	ret = status = 0;
+
+	curl = curl_easy_new();
+	if (!curl) {
+		return error(PW_ERR_CURL_INIT);
+	}
+
 	if (config->op_s_search) {
 		/* Search for packages on AUR */
-		ret = sync_search(targets);
-		return ret;
+		ret = sync_search(curl, targets);
+		goto final_cleanup;
 	} else if (config->op_s_info) {
-		ret = sync_info(targets);
-		return ret;
+		ret = sync_info(curl, targets);
+		goto final_cleanup;
 	}
 
 	/* Save our current directory */
@@ -575,7 +581,7 @@ int powaur_sync(alpm_list_t *targets)
 	}
 
 	/* DL the packages, get the working ones and install them */
-	download_packages(targets, &dl_failed);
+	download_packages(curl, targets, &dl_failed);
 	if (pwerrno == PW_ERR_ACCESS) {
 		goto cleanup;
 	}
@@ -631,6 +637,9 @@ cleanup:
 	alpm_list_free(success);
 	alpm_list_free(failure);
 
+final_cleanup:
+	curl_easy_cleanup(curl);
+
 	return ret ? -1 : 0;
 }
 
@@ -645,19 +654,28 @@ int powaur_maint(alpm_list_t *targets)
 		return -1;
 	}
 
+	int ret;
+	size_t listsz;
 	alpm_list_t *i, *results;
 	struct aurpkg_t *pkg;
-	size_t listsz;
+	CURL *curl;
+
+	curl = curl_easy_new();
+	if (!curl) {
+		return error(PW_ERR_CURL_INIT);
+	}
 
 	/* Clear pwerrno */
 	CLEAR_ERRNO();
-	results = query_aur(targets->data, AUR_QUERY_MSEARCH);
+	results = query_aur(curl, targets->data, AUR_QUERY_MSEARCH);
 
 	if (pwerrno != PW_ERR_OK) {
-		return -1;
+		ret = -1;
+		goto cleanup;
 	} else if (!results) {
 		printf("No packages found.\n");
-		return 0;
+		ret = -1;
+		goto cleanup;
 	}
 
 	/* Sort by alphabetical order */
@@ -674,7 +692,10 @@ int powaur_maint(alpm_list_t *targets)
 			   pkg->desc);
 	}
 
+cleanup:
 	alpm_list_free_inner(results, (alpm_list_fn_free) aurpkg_free);
 	alpm_list_free(results);
+	curl_easy_cleanup(curl);
+
 	return 0;
 }

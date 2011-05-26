@@ -33,17 +33,17 @@ yajl_handle yajl_init(void)
  * returns an alpm_list_t * of packages if everything is ok,
  * otherwise, returns NULL.
  */
-alpm_list_t *query_aur(const char *searchstr, enum aurquery_t query_type)
+alpm_list_t *query_aur(CURL *curl, const char *searchstr, enum aurquery_t query_type)
 {
 	int ret = 0;
 	yajl_handle hand;
 	char url[PATH_MAX];
 	long httpresp;
 
-	curl_init();
 	hand = yajl_init();
 
 	/* Query AUR */
+	curl_reset(curl);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, parse_json);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, hand);
 

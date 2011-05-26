@@ -5,7 +5,7 @@ all::
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 ALL_CFLAGS=$(CFLAGS)
-ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl
+ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl -pthread
 EXTRA_CPPFLAGS=
 
 prefix=@prefix@
@@ -51,7 +51,7 @@ powaur.o: powaur.c POWAUR-VERSION-GEN
 
 powaur.o: EXTRA_CPPFLAGS = -DPOWAUR_VERSION='"$(POWAUR_VERSION)"'
 
-$(OBJS): error.h environment.h powaur.h util.h
+$(OBJS): error.h environment.h powaur.h util.h wrapper.h
 conf.o environment.o query.o: conf.h
 download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
@@ -60,7 +60,6 @@ handle.o powaur.o sync.o: json.h
 query.o powaur.o sync.o: package.h
 json.o query.o: query.h
 powaur.o sync.o: sync.h
-conf.o environment.o handle.o package.o util.o wrapper.o: wrapper.h
 
 install: all
 	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)

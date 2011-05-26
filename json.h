@@ -2,6 +2,7 @@
 #define POWAUR_JSON_H
 
 #include <alpm.h>
+#include <curl/curl.h>
 #include <yajl/yajl_parse.h>
 
 #include "query.h"
@@ -23,7 +24,7 @@ struct json_ctx_t {
 yajl_handle yajl_init(void);
 
 /* Query functions */
-alpm_list_t *query_aur(const char *pkgname, enum aurquery_t type);
+alpm_list_t *query_aur(CURL *curl, const char *pkgname, enum aurquery_t type);
 
 /* curl WRITEDATA function */
 size_t parse_json(void *ptr, size_t sz, size_t nmemb, void *userdata);

@@ -83,6 +83,10 @@ enum _pw_errno_t {
 	PW_ERR_WAITPID_CONFUSED,
 	PW_ERR_WAITPID_SIGNAL,
 
+	/* pthreads errors */
+	PW_ERR_PTHREAD_CREATE,
+	PW_ERR_PTHREAD_JOIN,
+
 	/* libarchive errors */
 	PW_ERR_ARCHIVE_CREATE,
 	PW_ERR_ARCHIVE_OPEN,

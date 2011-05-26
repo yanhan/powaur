@@ -383,6 +383,11 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 		for (k = deps; k; k = k->next) {
 			found = 0;
 
+			/* Check against newdeps */
+			if (alpm_list_find_str(newdeps, k->data)) {
+				continue;
+			}
+
 			/* Check against localdb */
 			for (m = dbcache; m; m = m->next) {
 				pkg = m->data;
@@ -431,7 +436,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 				continue;
 			}
 
-			/* Can't find it. Add to newdeps */
+			/* Add to newdeps */
 			newdeps = alpm_list_add(newdeps, strdup(k->data));
 			if (config->verbose) {
 				printf("%s%s will be downloaded from the AUR\n", comstrs.tab,

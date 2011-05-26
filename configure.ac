@@ -31,6 +31,10 @@ AC_CHECK_LIB([archive], [archive_write_new], ,
 AC_CHECK_LIB([yajl], [yajl_alloc], ,
 	AC_MSG_ERROR([yajl is needed to compile powaur]))
 
+# TODO: Make this optional?
+AC_CHECK_LIB([pthread], [pthread_create], ,
+	AC_MSG_ERROR([pthread is needed to compile powaur]))
+
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/ioctl.h unistd.h])
 

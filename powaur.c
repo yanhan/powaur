@@ -9,6 +9,7 @@
 #include <curl/curl.h>
 #include <yajl/yajl_parse.h>
 
+#include "curl.h"
 #include "download.h"
 #include "environment.h"
 #include "handle.h"
@@ -24,7 +25,6 @@ static int powaur_cleanup(int ret)
 {
 	FREELIST(powaur_targets);
 
-	/* TODO: Shift curl and handle stuff to environment? */
 	curl_cleanup();
 	_pwhandle_free(pwhandle);
 	cleanup_environment();
@@ -57,6 +57,7 @@ static int powaur_init(void)
 		}
 	}
 
+	curl_init();
 	return ret;
 }
 
@@ -341,7 +342,12 @@ static int parseargs(int argc, char *argv[])
 	 * and are taken to be packages
 	 */
 	while (optind < argc) {
-		powaur_targets = alpm_list_add(powaur_targets, strdup(argv[optind++]));
+		if (!alpm_list_find_str(powaur_targets, argv[optind])) {
+			pw_printf(PW_LOG_DEBUG, "adding target: %s\n", argv[optind]);
+			powaur_targets = alpm_list_add(powaur_targets, strdup(argv[optind]));
+		}
+
+		++optind;
 	}
 
 	return 0;

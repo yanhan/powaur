@@ -15,6 +15,7 @@ struct config_t *config;
 enum _pw_errno_t pwerrno = PW_ERR_OK;
 char *powaur_dir;
 char *powaur_editor;
+int powaur_maxthreads = PW_DEF_MAXTHREADS;
 
 /* Pacman configuration */
 char *pacman_rootdir;

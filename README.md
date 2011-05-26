@@ -8,7 +8,7 @@ Currently, powaur has a minimalistic feature set which allows you to:
 
 - Search for packages on the AUR
 - Query local and sync databases for package information
-- Download packages from the AUR
+- Download packages from the AUR (w/ dependency resolution)
 - Install packages from the AUR (no dependency resolution)
 - Backup your pacman local database
 
@@ -46,7 +46,7 @@ to installing packages. What it does is:
 
 - Downloads the tarball packages from the AUR
 - Unzips them in `/tmp/powaur`
-- Asks the user to edit the PKGBUILD (only vim for now, sorry)
+- Asks the user to edit the PKGBUILD
 - Invokes `makepkg -s` to install the package
 
 

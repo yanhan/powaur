@@ -13,6 +13,11 @@ powaur involves specifying an operation with applicable options and targets.
 Download PKGBUILDS from the AUR. PKGBUILDS are downloaded as tarballs, then
 extracted into the current working directory. Dependency resolution can be
 turned on with the --deps flag.
+.IP
+powaur now supports multi-threaded downloading, up to a maximum of 10 threads.
+.IP
+NOTE: With --deps, downloading is threaded but dependency resolution is NOT
+threaded.
 .TP
 .B "-Q, --query"
 Query the pacman local database. This option lets you view information about
@@ -47,6 +52,7 @@ Display debug messages.
 .SH GETPKGBUILD OPTIONS
 .TP
 .B "--deps"
+.br
 Resolve dependencies for all target packages. If any dependencies are from the
 AUR, they will be downloaded, with their dependencies resolved. This is done
 until all dependencies have been resolved.
@@ -54,6 +60,9 @@ until all dependencies have been resolved.
 NOTE: For dependency resolution to work properly, the package names in the
 PKGBUILDS must be exact. Use the --verbose flag to see more information for
 dependency resolution.
+.IP
+NOTE: Dependency resolution is NOT threaded. But downloading of resolved packages
+is threaded.
 .TP
 .B "--target <DIR>"
 Downloads packages to alterante directory <DIR> instead of the current working

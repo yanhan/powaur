@@ -20,6 +20,7 @@
 #define PW_DEF_DIR "/tmp/powaur/"
 #define PW_DEF_EDITOR "vim"
 #define PW_CONF "powaur.conf"
+#define PW_DEF_MAXTHREADS 10
 
 /* Pacman defaults */
 #define PACMAN_DEF_ROOTDIR "/"
@@ -33,6 +34,7 @@ extern struct config_t *config;
 extern enum _pw_errno_t pwerrno;
 extern char *powaur_dir;
 extern char *powaur_editor;
+extern int powaur_maxthreads;
 
 /* Pacman configuration settings */
 extern char *pacman_rootdir;
