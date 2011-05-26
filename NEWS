@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
-----------------------------------------------------------------------
+--------------------------------------------------------------------------------
+0.1.2         - Multithreaded downloading of packages is now supported
+              - Add "MaxThreads" option in config file
+              - Add --threads option to specify maximum no. of threads.
+              - Add --deps flag for -G. By default, dependency resolution is
+			    turned off.
 0.1.1         - -G flag now resolves dependencies
               - Removed unsuccessfully downloaded packages
 			  - Add verbose flag

@@ -1,4 +1,4 @@
-.TH POWAUR 1 "25-05-2011" "powaur" "powaur manual"
+.TH POWAUR 1 "26-05-2011" "powaur" "powaur manual"
 .SH NAME
 powaur \- an AUR helper with a pacman-like interface
 .SH SYNOPSIS
