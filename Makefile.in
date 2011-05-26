@@ -39,7 +39,7 @@ HDRS=conf.h curl.h download.h environment.h error.h handle.h json.h package.h \
 OBJS=$(SRC:.c=.o)
 
 DIST_FILES=$(SRC) $(HDRS) POWAUR-VERSION-GEN configure config.h.in Makefile.in \
-		   powaur.1.txt powaur.conf COPYING INSTALL NEWS README TECHNICAL
+		   powaur.1.txt powaur.conf COPYING INSTALL NEWS README.md TECHNICAL
 
 all:: powaur
 
