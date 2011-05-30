@@ -19,7 +19,69 @@
 #include "powaur.h"
 #include "util.h"
 
-int pw_printf(enum pwloglevel_t lvl, const char *fmt, ...)
+/* Safe family of print functions for use when color struct isnt initialized */
+static int pw_safe_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt,
+							va_list ap)
+{
+	int ret = 0;
+	va_list copy_list;
+
+	if (!config || !(config->loglvl & lvl)) {
+		return ret;
+	}
+
+	va_copy(copy_list, ap);
+
+	switch (lvl) {
+	case PW_LOG_WARNING:
+		fprintf(stream, "WARNING: ");
+		break;
+	case PW_LOG_ERROR:
+		fprintf(stream, "error: ");
+		break;
+	case PW_LOG_INFO:
+		fprintf(stream, "==> ");
+		break;
+	case PW_LOG_DEBUG:
+		fprintf(stream, "debug: ");
+		break;
+	}
+
+	ret = vfprintf(stream, fmt, ap);
+	return ret;
+}
+
+static int pw_safe_printf(enum pwloglevel_t lvl, const char *fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = pw_safe_vfprintf(lvl, stdout, fmt, ap);
+	va_end(ap);
+
+	return ret;
+}
+
+static int pw_safe_fprintf(enum pwloglevel_t lvl, FILE *stream,
+						   const char *fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = pw_safe_vfprintf(lvl, stderr, fmt, ap);
+	va_end(ap);
+
+	return ret;
+}
+
+int (*pw_printf)(enum pwloglevel_t lvl, const char *fmt, ...) = pw_safe_printf;
+int (*pw_fprintf)(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...) = pw_safe_fprintf;
+int (*pw_vfprintf)(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap) = pw_safe_vfprintf;
+
+/* Colorized output printing functions */
+static int pw_cprintf(enum pwloglevel_t lvl, const char *fmt, ...)
 {
 	int ret;
 	va_list ap;
@@ -31,7 +93,7 @@ int pw_printf(enum pwloglevel_t lvl, const char *fmt, ...)
 	return ret;
 }
 
-int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
+static int pw_cfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
 {
 	int ret;
 	va_list ap;
@@ -43,7 +105,7 @@ int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
 	return ret;
 }
 
-int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
+static int pw_cvfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
 {
 	int ret = 0;
 	va_list copy_list;
@@ -72,6 +134,22 @@ int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap
 	ret = vfprintf(stream, fmt, ap);
 	fprintf(stream, "%s", color.nocolor);
 	return ret;
+}
+
+void color_print_setup(void)
+{
+	if (config->color) {
+		pw_printf   = pw_cprintf;
+		pw_fprintf  = pw_cfprintf;
+		pw_vfprintf = pw_cvfprintf;
+	}
+}
+
+void color_print_restore(void)
+{
+	pw_printf   = pw_safe_printf;
+	pw_fprintf  = pw_safe_fprintf;
+	pw_vfprintf = pw_safe_vfprintf;
 }
 
 /* Extracts the downloaded archive and removes it upon success.

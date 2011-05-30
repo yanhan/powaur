@@ -15,14 +15,20 @@
 
 int powaur_backup(alpm_list_t *targets);
 
-int pw_printf(enum pwloglevel_t lvl, const char *fmt, ...)
+extern int (*pw_printf)(enum pwloglevel_t lvl, const char *fmt, ...)
 __attribute__((format (printf, 2, 3)));
 
-int pw_fprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
+extern int (*pw_fprintf)(enum pwloglevel_t lvl, FILE *stream, const char *fmt, ...)
 __attribute__((format (printf, 3, 4)));
 
-int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
+extern int (*pw_vfprintf)(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap)
 __attribute__((format (printf, 3, 0)));
+
+/* Setup color printing functions */
+void color_print_setup(void);
+
+/* Restore color printing functions to non-colorized versions */
+void color_print_restore(void);
 
 int extract_file(const char *filename);
 int getcols(void);

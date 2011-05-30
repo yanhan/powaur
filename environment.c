@@ -57,6 +57,10 @@ static void colors_setup(void)
 		color.nocolor = xstrdup(NOCOLOR);
 		color.bold    = xstrdup(BOLD);
 		color.votecol = xstrdup(VOTECOL);
+
+		/* Setup colorized print functions */
+		color_print_setup();
+
 	} else {
 		color.black   = xstrdup("");
 		color.red     = xstrdup("");
@@ -77,6 +81,9 @@ static void colors_setup(void)
 		color.nocolor = xstrdup("");
 		color.bold    = xstrdup("");
 		color.votecol = xstrdup("");
+
+		/* Restore non-colorized print functions */
+		color_print_restore;
 	}
 }
 
