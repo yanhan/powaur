@@ -56,13 +56,13 @@ int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap
 
 	switch (lvl) {
 	case PW_LOG_WARNING:
-		fprintf(stream, "WARNING: ");
+		fprintf(stream, "%sWARNING:%s%s ", color.byellow, color.nocolor, color.bold);
 		break;
 	case PW_LOG_ERROR:
-		fprintf(stream, "error: ");
+		fprintf(stream, "%serror:%s%s ", color.bred, color.nocolor, color.bold);
 		break;
 	case PW_LOG_INFO:
-		fprintf(stream, "==> ");
+		fprintf(stream, "%s==>%s%s ", color.bgreen, color.nocolor, color.bold);
 		break;
 	case PW_LOG_DEBUG:
 		fprintf(stream, "debug: ");
@@ -70,6 +70,7 @@ int pw_vfprintf(enum pwloglevel_t lvl, FILE *stream, const char *fmt, va_list ap
 	}
 
 	ret = vfprintf(stream, fmt, ap);
+	fprintf(stream, "%s", color.nocolor);
 	return ret;
 }
 
