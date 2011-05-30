@@ -64,8 +64,8 @@ void parse_powaur_config(FILE *fp)
 			}
 
 			powaur_editor = xstrdup(val);
-			pw_printf(PW_LOG_DEBUG, "%s%sParsed Editor = %s\n", comstrs.tab,
-					  comstrs.tab, powaur_editor);
+			pw_printf(PW_LOG_DEBUG, "%s%sParsed Editor = %s\n", TAB, TAB,
+					  powaur_editor);
 
 		} else if (!strcmp(key, "TmpDir")) {
 			if (powaur_dir) {
@@ -73,19 +73,19 @@ void parse_powaur_config(FILE *fp)
 			}
 
 			powaur_dir = xstrdup(val);
-			pw_printf(PW_LOG_DEBUG, "%s%sParsed TmpDir = %s\n", comstrs.tab,
-					  comstrs.tab, powaur_dir);
+			pw_printf(PW_LOG_DEBUG, "%s%sParsed TmpDir = %s\n", TAB, TAB,
+					  powaur_dir);
 
 		} else if (!strcmp(key, "MaxThreads")) {
 			if (config->opt_maxthreads) {
 				pw_printf(PW_LOG_DEBUG, "%s%s--threads = %d, overriding config\n",
-						  comstrs.tab, comstrs.tab, powaur_maxthreads);
+						  TAB, TAB, powaur_maxthreads);
 				continue;
 			}
 
 			powaur_maxthreads = atoi(val);
-			pw_printf(PW_LOG_DEBUG, "%s%sParsed MaxThreads = %d\n", comstrs.tab,
-					  comstrs.tab, powaur_maxthreads);
+			pw_printf(PW_LOG_DEBUG, "%s%sParsed MaxThreads = %d\n", TAB, TAB,
+					  powaur_maxthreads);
 
 			if (powaur_maxthreads < 1 || powaur_maxthreads > PW_DEF_MAXTHREADS) {
 				powaur_maxthreads = 0;
@@ -116,8 +116,7 @@ static void parse_pmoption_keyval(int *flag, int *flag_com, char *line,
 	}
 
 	*env_conf = strdup(line);
-	pw_printf(PW_LOG_DEBUG, "%s%sDefault %s = %s\n",
-			  comstrs.tab, comstrs.tab, key, *env_conf);
+	pw_printf(PW_LOG_DEBUG, "%s%sDefault %s = %s\n", TAB, TAB, key, *env_conf);
 
 	if (comment) {
 		*flag_com = 1;
@@ -204,61 +203,55 @@ static int _parse_pmoption(char *line)
 			return 0;
 		}
 
-		if (!strncmp(line, comstrs.rootdir, 7)) {
-			parse_pmoption_keyval(&rootdir, &rootdir_com, line, comstrs.rootdir,
+		if (!strncmp(line, ROOTDIR, 7)) {
+			parse_pmoption_keyval(&rootdir, &rootdir_com, line, ROOTDIR,
 								  &pacman_rootdir, 1);
 
-		} else if (!strncmp(line, comstrs.dbpath, 6)) {
-			parse_pmoption_keyval(&dbpath, &dbpath_com, line, comstrs.dbpath,
+		} else if (!strncmp(line, DBPATH, 6)) {
+			parse_pmoption_keyval(&dbpath, &dbpath_com, line, DBPATH,
 								  &pacman_dbpath, 1);
 
-		} else if (!strncmp(line, comstrs.cachedir, 8)) {
-			parse_pmoption_repeat(&cachedir, &cachedir_com, line,
-								  comstrs.cachedir, setrepeat_cachedir,
-								  free_cachedir, (void **) &pacman_cachedirs, 1);
+		} else if (!strncmp(line, CACHEDIR, 8)) {
+			parse_pmoption_repeat(&cachedir, &cachedir_com, line, CACHEDIR,
+								  setrepeat_cachedir, free_cachedir,
+								  (void **) &pacman_cachedirs, 1);
 
-			pw_printf(PW_LOG_DEBUG, "%s%sCachedir default:\n", comstrs.tab,
-					  comstrs.tab);
-
+			pw_printf(PW_LOG_DEBUG, "%s%sCachedir default:\n", TAB, TAB);
 			indent_print(PW_LOG_DEBUG, pacman_cachedirs, 12);
 		}
 
 	} else {
 		/* Non-commented, ie. official stuff */
 
-		if (!strncmp(line, comstrs.rootdir, 7)) {
+		if (!strncmp(line, ROOTDIR, 7)) {
 			if (rootdir) {
-				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n",
-						  comstrs.tab, comstrs.tab, comstrs.rootdir);
+				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n", TAB, TAB, ROOTDIR);
 				return -1;
 			}
 
-			parse_pmoption_keyval(&rootdir, &rootdir_com, line, comstrs.rootdir,
+			parse_pmoption_keyval(&rootdir, &rootdir_com, line, ROOTDIR,
 								  &pacman_rootdir, 0);
 
-		} else if (!strncmp(line, comstrs.dbpath, 6)) {
+		} else if (!strncmp(line, DBPATH, 6)) {
 			if (dbpath) {
-				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n",
-						  comstrs.tab, comstrs.tab, comstrs.dbpath);
+				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n", TAB, TAB, DBPATH);
 				return -1;
 			}
 
-			parse_pmoption_keyval(&dbpath, &dbpath_com, line, comstrs.dbpath,
+			parse_pmoption_keyval(&dbpath, &dbpath_com, line, DBPATH,
 								  &pacman_dbpath, 0);
 
-		} else if (!strncmp(line, comstrs.cachedir, 8)) {
+		} else if (!strncmp(line, CACHEDIR, 8)) {
 			if (cachedir) {
-				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n", comstrs.tab,
-						  comstrs.tab, comstrs.cachedir);
+				pw_printf(PW_LOG_ERROR, "%s%sRepeated %s\n", TAB, TAB, CACHEDIR);
 				return -1;
 			}
 
-			parse_pmoption_repeat(&cachedir, &cachedir_com, line,
-								  comstrs.cachedir, setrepeat_cachedir,
-								  free_cachedir, (void **) &pacman_cachedirs, 0);
+			parse_pmoption_repeat(&cachedir, &cachedir_com, line, CACHEDIR,
+								  setrepeat_cachedir, free_cachedir,
+								  (void **) &pacman_cachedirs, 0);
 
-			pw_printf(PW_LOG_DEBUG, "%s%sCachedir final:\n", comstrs.tab,
-					  comstrs.tab);
+			pw_printf(PW_LOG_DEBUG, "%s%sCachedir final:\n", TAB, TAB);
 			indent_print(PW_LOG_DEBUG, pacman_cachedirs, 12);
 		}
 	}
@@ -284,12 +277,12 @@ int parse_pmconfig(void)
 	int in_options = 0;
 	int parsed_options = 0;
 
-	fp = fopen(comstrs.pmconf, "r");
+	fp = fopen(PMCONF, "r");
 	if (!fp) {
 		return error(PW_ERR_PM_CONF_OPEN);
 	}
 
-	pw_printf(PW_LOG_DEBUG, "%s : Parsing %s\n", __func__, comstrs.pmconf);
+	pw_printf(PW_LOG_DEBUG, "%s : Parsing %s\n", __func__, PMCONF);
 
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
@@ -310,24 +303,23 @@ int parse_pmconfig(void)
 			/* Get new length of line */
 			len = strlen(line);
 
-			if (!strcmp(line, comstrs.opt)) {
+			if (!strcmp(line, OPT)) {
 				if (parsed_options) {
 					pw_printf(PW_LOG_ERROR, "%sRepeated %s section in %s\n",
-							  comstrs.tab, comstrs.opt, comstrs.pmconf);
+							  TAB, OPT, PMCONF);
 					ret = -1;
 					goto cleanup;
 				}
 
 				pw_printf(PW_LOG_DEBUG, "%sParsing [%s] section of %s\n",
-						  comstrs.tab, comstrs.opt, comstrs.pmconf);
+						  TAB, OPT, PMCONF);
 
 				parsed_options = 1;
 				in_options = 1;
 				continue;
 
 			} else if (len == 0) {
-				pw_printf(PW_LOG_DEBUG, "%sEmpty section in %s\n",
-						  comstrs.tab, comstrs.pmconf);
+				pw_printf(PW_LOG_DEBUG, "%sEmpty section in %s\n", TAB, PMCONF);
 				ret = -1;
 				goto cleanup;
 			} else {
@@ -336,17 +328,16 @@ int parse_pmconfig(void)
 				 */
 				in_options = 0;
 
-				pw_printf(PW_LOG_DEBUG, "%sParsing Repo [%s]\n",
-						  comstrs.tab, line);
+				pw_printf(PW_LOG_DEBUG, "%sParsing Repo [%s]\n", TAB, line);
 
 				if (!alpm_db_register_sync(line)) {
 					pw_printf(PW_LOG_ERROR, "%sFailed to register %s db\n",
-							  comstrs.tab, line);
+							  TAB, line);
 					goto cleanup;
 				}
 
 				pw_printf(PW_LOG_DEBUG, "%sRegistering sync database '%s'\n",
-						  comstrs.tab, line);
+						  TAB, line);
 			}
 
 		} else if (in_options) {

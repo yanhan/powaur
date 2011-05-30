@@ -66,44 +66,35 @@ static int powaur_init(void)
 static void usage(unsigned short op)
 {
 	if (op == PW_OP_MAIN) {
-		printf("%s %s <operation> [...]\n", comstrs.usage, comstrs.myname);
-		printf("%s%s {-h --help}\n", comstrs.tab, comstrs.myname);
-		printf("%s%s {-G --getpkgbuild} <%s>\n", comstrs.tab, comstrs.myname,
-			   comstrs.pkg);
-		printf("%s%s {-S --sync}        [%s] [%s]\n", comstrs.tab, 
-			   comstrs.myname, comstrs.opt, comstrs.pkg);
-		printf("%s%s {-Q --query}       [%s] [%s]\n", comstrs.tab,
-			   comstrs.myname, comstrs.opt, comstrs.pkg);
-		printf("%s%s {-M --maintainer}  <%s>\n", comstrs.tab, comstrs.myname,
-			   comstrs.pkg);
-		printf("%s%s {-B --backup} [dir]\n", comstrs.tab, comstrs.myname);
-		printf("%s%s {-V --version}\n", comstrs.tab, comstrs.myname);
+		printf("%s %s <operation> [...]\n", USAGE, MYNAME);
+		printf("%s%s {-h --help}\n", TAB, MYNAME);
+		printf("%s%s {-G --getpkgbuild} <%s>\n", TAB, MYNAME, PKG);
+		printf("%s%s {-S --sync}        [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
+		printf("%s%s {-Q --query}       [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
+		printf("%s%s {-M --maintainer}  <%s>\n", TAB, MYNAME, PKG);
+		printf("%s%s {-B --backup} [dir]\n", TAB, MYNAME);
+		printf("%s%s {-V --version}\n", TAB, MYNAME);
 	} else {
 		if (op == PW_OP_SYNC) {
-			printf("%s %s {-S --sync} [%s] [%s]\n", comstrs.usage,
-				   comstrs.myname, comstrs.opt, comstrs.pkg);
+			printf("%s %s {-S --sync} [%s] [%s]\n", USAGE, MYNAME, OPT, PKG);
 		} else if (op == PW_OP_QUERY) {
-			printf("%s %s {-Q --query} [%s] [%s]\n", comstrs.usage,
-				   comstrs.myname, comstrs.opt, comstrs.pkg);
+			printf("%s %s {-Q --query} [%s] [%s]\n", USAGE, MYNAME, OPT, PKG);
 		} else if (op == PW_OP_GET) {
-			printf("%s %s {-G --getpkgbuild <%s>\n", comstrs.usage,
-				   comstrs.myname, comstrs.pkg);
+			printf("%s %s {-G --getpkgbuild <%s>\n", USAGE, MYNAME, PKG);
 		} else if (op == PW_OP_MAINTAINER) {
-			printf("%s %s {-M --maintainer <%s>\n", comstrs.usage,
-				   comstrs.myname, comstrs.pkg);
+			printf("%s %s {-M --maintainer <%s>\n", USAGE, MYNAME, PKG);
 		} else if (op == PW_OP_BACKUP) {
-			printf("%s %s {-B --backup} [dir]\n", comstrs.usage, comstrs.myname);
+			printf("%s %s {-B --backup} [dir]\n", USAGE, MYNAME);
 		}
 
-		printf("%s:\n", comstrs.opt);
+		printf("%s:\n", OPT);
 
 		switch (op) {
 		case PW_OP_SYNC:
 		case PW_OP_QUERY:
 			printf("  -i, --info                 view package information\n");
 			printf("  -s, --search <%s>  search %s repositories for %s\n",
-				   comstrs.pkg, op == PW_OP_SYNC ? "sync" : "local",
-				   comstrs.pkg);
+				   PKG, op == PW_OP_SYNC ? "sync" : "local", PKG);
 			break;
 		case PW_OP_GET:
 			printf("      --target <DIR>         downloads to alternate directory DIR\n");

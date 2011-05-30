@@ -272,7 +272,7 @@ int powaur_get(alpm_list_t *targets)
 		if (config->loglvl & PW_LOG_DEBUG) {
 			pw_printf(PW_LOG_DEBUG, "Downloading the following deps:\n");
 			for (i = resolve; i; i = i->next) {
-				pw_printf(PW_LOG_DEBUG, "%s%s\n", comstrs.tab, i->data);
+				pw_printf(PW_LOG_DEBUG, "%s%s\n", TAB, i->data);
 			}
 			pw_printf(PW_LOG_DEBUG, "\n");
 		}

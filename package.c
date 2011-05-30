@@ -230,7 +230,7 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 				*list = alpm_list_add(*list, strdup(token));
 			}
 
-			pw_printf(PW_LOG_DEBUG, "%sParsed \"%s\"\n", comstrs.tab, token);
+			pw_printf(PW_LOG_DEBUG, "%sParsed \"%s\"\n", TAB, token);
 		}
 	}
 }
@@ -399,7 +399,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 
 			if (found) {
 				if (config->verbose) {
-					printf("%s%s - Already installed\n", comstrs.tab, k->data);
+					printf("%s%s - Already installed\n", TAB, k->data);
 				}
 
 				continue;
@@ -418,7 +418,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 
 			if (found) {
 				if (config->verbose) {
-					printf("%s%s can be found in %s repo\n", comstrs.tab, k->data,
+					printf("%s%s can be found in %s repo\n", TAB, k->data,
 						   alpm_db_get_name(alpm_pkg_get_db(pkg)));
 				}
 
@@ -429,8 +429,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", k->data);
 			if (!stat(pkgbuild, &st)) {
 				if (config->verbose) {
-					printf("%s%s is present in current directory\n", comstrs.tab,
-						   k->data);
+					printf("%s%s is present in current directory\n", TAB, k->data);
 				}
 
 				continue;
@@ -439,8 +438,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			/* Add to newdeps */
 			newdeps = alpm_list_add(newdeps, strdup(k->data));
 			if (config->verbose) {
-				printf("%s%s will be downloaded from the AUR\n", comstrs.tab,
-					   k->data);
+				printf("%s%s will be downloaded from the AUR\n", TAB, k->data);
 			}
 		}
 
@@ -470,8 +468,8 @@ int pacman_db_info(alpm_list_t *dbs, enum pkgfrom_t from, int search)
 			for (j = alpm_db_get_pkgcache(db); j; j = j->next) {
 				pkg = j->data;
 				printf("%s/%s %s\n%s%s\n", alpm_db_get_name(db),
-					   alpm_pkg_get_name(pkg), alpm_pkg_get_version(pkg),
-					   comstrs.tab, alpm_pkg_get_desc(pkg));
+					   alpm_pkg_get_name(pkg), alpm_pkg_get_version(pkg), TAB,
+					   alpm_pkg_get_desc(pkg));
 			}
 		}
 
@@ -555,41 +553,41 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 	}
 
 	if (from == PKG_FROM_SYNC) {
-		printf("%s %s\n", comstrs.i_repo, alpm_db_get_name(db));
+		printf("%s %s\n", REPO, alpm_db_get_name(db));
 	}
 
-	printf("%s %s\n", comstrs.i_name, alpm_pkg_get_name(pkg));
-	printf("%s %s\n", comstrs.i_version, alpm_pkg_get_version(pkg));
-	printf("%s %s\n", comstrs.i_url, alpm_pkg_get_url(pkg));
+	printf("%s %s\n", NAME, alpm_pkg_get_name(pkg));
+	printf("%s %s\n", VERSION, alpm_pkg_get_version(pkg));
+	printf("%s %s\n", URL, alpm_pkg_get_url(pkg));
 
-	print_list(alpm_pkg_get_licenses(pkg), comstrs.i_licenses);
-	print_list(alpm_pkg_get_groups(pkg), comstrs.i_grps);
-	print_list(alpm_pkg_get_provides(pkg), comstrs.i_provides);
+	print_list(alpm_pkg_get_licenses(pkg), LICENSES);
+	print_list(alpm_pkg_get_groups(pkg), GROUPS);
+	print_list(alpm_pkg_get_provides(pkg), PROVIDES);
 
-	print_list_deps(alpm_pkg_get_depends(pkg), comstrs.i_deps);
-	print_list_break(alpm_pkg_get_optdepends(pkg), comstrs.i_optdeps);
+	print_list_deps(alpm_pkg_get_depends(pkg), DEPS);
+	print_list_break(alpm_pkg_get_optdepends(pkg), OPTDEPS);
 
 	if (from == PKG_FROM_LOCAL) {
 		results = alpm_pkg_compute_requiredby(pkg);
-		print_list(results, comstrs.i_reqby);
+		print_list(results, REQBY);
 	}
 
-	print_list(alpm_pkg_get_conflicts(pkg), comstrs.i_conflicts);
-	print_list(alpm_pkg_get_replaces(pkg), comstrs.i_replaces);
+	print_list(alpm_pkg_get_conflicts(pkg), CONFLICTS);
+	print_list(alpm_pkg_get_replaces(pkg), REPLACES);
 
 	if (from == PKG_FROM_SYNC) {
-		humanize_size(alpm_pkg_get_size(pkg), comstrs.i_dlsz);
+		humanize_size(alpm_pkg_get_size(pkg), DLSZ);
 	}
 
-	humanize_size(alpm_pkg_get_isize(pkg), comstrs.i_isz);
-	printf("%s %s\n", comstrs.i_pkger, alpm_pkg_get_packager(pkg));
-	printf("%s %s\n", comstrs.i_arch, alpm_pkg_get_arch(pkg));
-	printf("%s %s\n", comstrs.i_builddate, builddate);
+	humanize_size(alpm_pkg_get_isize(pkg), INSTSZ);
+	printf("%s %s\n", PKGER, alpm_pkg_get_packager(pkg));
+	printf("%s %s\n", ARCH, alpm_pkg_get_arch(pkg));
+	printf("%s %s\n", BDATE, builddate);
 
 	if (from == PKG_FROM_LOCAL) {
-		printf("%s %s\n", comstrs.i_installdate, installdate);
+		printf("%s %s\n", IDATE, installdate);
 
-		printf("%s ", comstrs.i_reason);
+		printf("%s ", REASON);
 		switch (reason) {
 		case PM_PKG_REASON_EXPLICIT:
 			printf("Explicitly installed");
@@ -603,13 +601,13 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 		}
 
 		printf("\n");
-		printf("%s %s\n", comstrs.i_script, has_script ? "Yes" : "No");
+		printf("%s %s\n", SCRIPT, has_script ? "Yes" : "No");
 	}
 
 	if (from == PKG_FROM_SYNC) {
-		printf("%s %s\n", comstrs.i_md5, alpm_pkg_get_md5sum(pkg));
+		printf("%s %s\n", MD5SUM, alpm_pkg_get_md5sum(pkg));
 	}
 
-	printf("%s %s\n", comstrs.i_desc, alpm_pkg_get_desc(pkg));
+	printf("%s %s\n", DESC, alpm_pkg_get_desc(pkg));
 	FREELIST(results);
 }

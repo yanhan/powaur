@@ -458,27 +458,27 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 			printf("\n");
 		}
 
-		printf("%s aur\n", comstrs.i_repo);
-		printf("%s %s\n", comstrs.i_name, pkg->name);
-		printf("%s %s\n", comstrs.i_version, pkg->version);
-		printf("%s %s\n", comstrs.i_url, pkg->url);
-		printf("%s ", comstrs.i_aur_url);
+		printf("%s aur\n", REPO);
+		printf("%s %s\n", NAME, pkg->name);
+		printf("%s %s\n", VERSION, pkg->version);
+		printf("%s %s\n", URL, pkg->url);
+		printf("%s ", A_URL);
 		printf(AUR_PKG_URL, pkg->id);
 		printf("\n");
 
-		printf("%s %s\n", comstrs.i_licenses, pkg->license);
-		printf("%s %d\n", comstrs.i_aur_votes, pkg->votes);
-		printf("%s %s\n", comstrs.i_aur_outofdate,
+		printf("%s %s\n", LICENSES, pkg->license);
+		printf("%s %d\n", A_VOTES, pkg->votes);
+		printf("%s %s\n", A_OUTOFDATE,
 			   pkg->outofdate ? "Yes" : "No");
 
-		print_list(pkg->provides, comstrs.i_provides);
-		print_list(pkg->depends, comstrs.i_deps);
-		print_list(pkg->optdepends, comstrs.i_optdeps);
-		print_list(pkg->conflicts, comstrs.i_conflicts);
-		print_list(pkg->replaces, comstrs.i_replaces);
-		print_list(pkg->arch, comstrs.i_arch);
+		print_list(pkg->provides, PROVIDES);
+		print_list(pkg->depends, DEPS);
+		print_list(pkg->optdepends, OPTDEPS);
+		print_list(pkg->conflicts, CONFLICTS);
+		print_list(pkg->replaces, REPLACES);
+		print_list(pkg->arch, ARCH);
 
-		printf("%s %s\n", comstrs.i_desc, pkg->desc);
+		printf("%s %s\n", DESC, pkg->desc);
 
 destroy_remnants:
 		fclose(fp);
@@ -688,8 +688,7 @@ int powaur_maint(alpm_list_t *targets)
 
 	for (i = results; i; i = i->next) {
 		pkg = i->data;
-		printf("aur/%s (%d)\n%s%s\n", pkg->name, pkg->votes, comstrs.tab,
-			   pkg->desc);
+		printf("aur/%s (%d)\n%s%s\n", pkg->name, pkg->votes, TAB, pkg->desc);
 	}
 
 cleanup:

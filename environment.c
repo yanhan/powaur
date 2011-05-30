@@ -22,26 +22,6 @@ char *pacman_rootdir;
 char *pacman_dbpath;
 alpm_list_t *pacman_cachedirs;
 
-struct commonstrings comstrs = {
-	"powaur", "usage: ", "package(s)", "options", "    ",
-
-	/* Pacman configuration */
-	"/etc/pacman.conf", "RootDir", "DBPath", "CacheDir",
-
-	/* -Si, -Qi */
-	"Repository     :", "Name           :", "Version        :",
-	"URL            :", "Licenses       :", "Groups         :",
-	"Provides       :", "Depends On     :",	"Optional Deps  :",
-	"Required By    :",
-	"Conflicts With :", "Replaces       :", "Download Size  :",
-	"Installed Size :", "Packager       :", "Architecture   :",
-	"Build Date     :", "Install Date   :", "Install Reason :",
-	"Install Script :", "MD5 Sum        :", "Description    :",
-
-	/* -Si, -Qi for AUR */
-	"AUR URL        :", "Votes          :", "Out of Date    :"
-};
-
 int setup_config(void)
 {
 	config = config_init();
@@ -115,7 +95,7 @@ static int setup_powaur_config(void)
 				goto check_home;
 			}
 
-			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", comstrs.tab, buf);
+			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", TAB, buf);
 			parse_powaur_config(fp);
 			fclose(fp);
 			goto cleanup;
@@ -134,7 +114,7 @@ check_home:
 				goto cleanup;
 			}
 
-			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", comstrs.tab, buf);
+			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", TAB, buf);
 			(fp);
 			fclose(fp);
 		}
@@ -146,13 +126,13 @@ cleanup:
 	if (!powaur_dir) {
 		powaur_dir = xstrdup(PW_DEF_DIR);
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default directory %s\n",
-				  comstrs.tab, powaur_dir);
+				  TAB, powaur_dir);
 	}
 
 	if (!powaur_editor) {
 		powaur_editor = xstrdup(PW_DEF_EDITOR);
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default editor %s\n",
-				  comstrs.tab, powaur_editor);
+				  TAB, powaur_editor);
 	}
 
 	if (powaur_maxthreads <= 0 || powaur_maxthreads > PW_DEF_MAXTHREADS) {
@@ -160,7 +140,7 @@ cleanup:
 	}
 
 	config->maxthreads = powaur_maxthreads;
-	pw_printf(PW_LOG_DEBUG, "%sMaximum no. of threads = %d\n", comstrs.tab,
+	pw_printf(PW_LOG_DEBUG, "%sMaximum no. of threads = %d\n", TAB,
 			  config->maxthreads);
 
 	return 0;

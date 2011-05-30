@@ -27,6 +27,42 @@
 #define PACMAN_DEF_DBPATH "/var/lib/pacman/"
 #define PACMAN_DEF_CACHEDIR "/var/cache/pacman/pkg/"
 
+/* Strings */
+#define MYNAME      "powaur"
+#define USAGE       "usage: "
+#define PKG         "package(s)"
+#define OPT         "options"
+#define TAB         "    "
+#define PMCONF      "/etc/pacman.conf"
+#define ROOTDIR     "RootDir"
+#define DBPATH      "DBPath"
+#define CACHEDIR    "CacheDir"
+#define REPO        "Repository     :"
+#define NAME        "Name           :"
+#define VERSION     "Version        :"
+#define URL         "URL            :"
+#define LICENSES    "Licenses       :"
+#define GROUPS      "Groups         :"
+#define PROVIDES    "Provides       :"
+#define DEPS        "Depends On     :"
+#define OPTDEPS     "Optional Deps  :"
+#define REQBY       "Required By    :"
+#define CONFLICTS   "Conflicts With :"
+#define REPLACES    "Replaces       :"
+#define DLSZ        "Download Size  :"
+#define INSTSZ      "Installed Size :"
+#define PKGER       "Packager       :"
+#define ARCH        "Architecture   :"
+#define BDATE       "Build Date     :"
+#define IDATE       "Install Date   :"
+#define REASON      "Install Reason :"
+#define SCRIPT      "Install Script :"
+#define MD5SUM      "MD5 Sum        :"
+#define DESC        "Description    :"
+#define A_URL       "AUR URL        :"
+#define A_VOTES     "Votes          :"
+#define A_OUTOFDATE "Out of Date    :"
+
 /* Global configuration */
 extern struct config_t *config;
 
@@ -40,52 +76,6 @@ extern int powaur_maxthreads;
 extern char *pacman_rootdir;
 extern char *pacman_dbpath;
 extern alpm_list_t *pacman_cachedirs;
-
-/* For commonly used strings */
-struct commonstrings {
-	const char *myname;
-	const char *usage;
-	const char *pkg;
-	const char *opt;
-	const char *tab;
-
-	/* Pacman configuration */
-	const char *pmconf;
-	const char *rootdir;
-	const char *dbpath;
-	const char *cachedir;
-
-	/* -Si, -Qi */
-	const char *i_repo;
-	const char *i_name;
-	const char *i_version;
-	const char *i_url;
-	const char *i_licenses;
-	const char *i_grps;
-	const char *i_provides;
-	const char *i_deps;
-	const char *i_optdeps;
-	const char *i_reqby;
-	const char *i_conflicts;
-	const char *i_replaces;
-	const char *i_dlsz;
-	const char *i_isz;
-	const char *i_pkger;
-	const char *i_arch;
-	const char *i_builddate;
-	const char *i_installdate;
-	const char *i_reason;
-	const char *i_script;
-	const char *i_md5;
-	const char *i_desc;
-
-	/* -Si, -Qi for AUR */
-	const char *i_aur_url;
-	const char *i_aur_votes;
-	const char *i_aur_outofdate;
-};
-
-extern struct commonstrings comstrs;
 
 int setup_environment(void);
 void cleanup_environment(void);

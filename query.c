@@ -66,7 +66,7 @@ static int query_search(pmdb_t *localdb, const char *pkgname)
 				printf(" (%s)", groups->data);
 			}
 
-			printf("\n%s %s\n", comstrs.tab, alpm_pkg_get_desc(pkg));
+			printf("\n%s %s\n", TAB, alpm_pkg_get_desc(pkg));
 			found = 1;
 		}
 	}
