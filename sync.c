@@ -700,7 +700,10 @@ int powaur_maint(alpm_list_t *targets)
 
 	for (i = results; i; i = i->next) {
 		pkg = i->data;
-		printf("aur/%s (%d)\n%s%s\n", pkg->name, pkg->votes, TAB, pkg->desc);
+		printf("%saur/%s%s%s %s%s %s(%d)%s\n", color.bmag, color.nocolor,
+			   color.bold, pkg->name, color.bgreen, pkg->version,
+			   color.byellow, pkg->votes, color.nocolor);
+		printf("%s%s\n", TAB, pkg->desc);
 	}
 
 cleanup:
