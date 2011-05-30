@@ -206,7 +206,7 @@ static int install_single_package(char *pkgname)
 	}
 
 	/* Ask user to edit PKGBUILD */
-	snprintf(buf, PATH_MAX, "Edit PKGBUILD for %s? (Y/n/a)", pkgname);
+	snprintf(buf, PATH_MAX, "Edit PKGBUILD for %s? [Y/n/a]", pkgname);
 	ret = mcq(buf, choices, sizeof(choices) / sizeof(*choices), 0);
 
 	switch (ret) {
@@ -235,7 +235,7 @@ edit_dotinstall:
 	/* First, check if we have .install file */
 	dotinstall = have_dotinstall();
 	if (dotinstall) {
-		snprintf(buf, PATH_MAX, "Edit .install for %s? (Y/n/a)", pkgname);
+		snprintf(buf, PATH_MAX, "Edit .install for %s? [Y/n/a]", pkgname);
 		ret = mcq(buf, choices, sizeof(choices) / sizeof(*choices), 0);
 
 		switch (ret) {

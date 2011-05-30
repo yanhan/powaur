@@ -200,6 +200,16 @@ int wait_or_whine(pid_t pid, char *argv0)
 	return ret;
 }
 
+void print_repeat(char c, int rep)
+{
+	int i;
+	for (i = 0; i < rep; ++i) {
+		printf("%c", c);
+	}
+
+	printf("\n");
+}
+
 /* Prints list of char *, one on each line with proper indentation */
 void indent_print(enum pwloglevel_t lvl, alpm_list_t *list, size_t indent)
 {
@@ -341,19 +351,28 @@ void print_list_break(alpm_list_t *list, const char *prefix)
  */
 static int question(int preset, const char *fmt, va_list args)
 {
-	int ret, len;
+	int i, ret, len, qlen;
 	char response[MINI_BUFSZ];
+	char buf[PATH_MAX];
 	char *str;
+
+	vsnprintf(buf, PATH_MAX, fmt, args);
+	qlen = strlen(buf) + 4 + 6;
 
 	fflush(stdout);
 	do {
-		vprintf(fmt, args);
+		print_repeat('-', qlen);
+		printf("%s==> %s%s", color.byellow, color.nocolor, color.bold);
+		printf("%s", buf);
 		if (preset) {
-			printf(" (Y/n) ");
+			printf(" [Y/n]");
 		} else {
-			printf(" (y/N) ");
+			printf(" [y/N]");
 		}
 
+		printf("\n");
+		print_repeat('-', qlen);
+		printf("%s==> %s", color.byellow, color.nocolor);
 		str = fgets(response, sizeof(response), stdin);
 		str = strtrim(str);
 		len = strlen(str);
@@ -362,8 +381,10 @@ static int question(int preset, const char *fmt, va_list args)
 			return preset;
 		} else {
 			if (!strcasecmp(str, "n") || !strcasecmp(str, "no")) {
+				print_repeat('-', len);
 				return 0;
 			} else if (!strcasecmp(str, "y") || !strcasecmp(str, "yes")) {
+				print_repeat('-', len);
 				return 1;
 			}
 		}
@@ -413,6 +434,7 @@ int yesno(const char *fmt, ...)
 	va_start(args, fmt);
 
 	ret = question(1, fmt, args);
+	printf("%s", color.nocolor);
 
 	va_end(args);
 	return ret;
@@ -436,13 +458,19 @@ int mcq(const char *qn, const char *choices, int arraySize, int preset)
 {
 	int i, len, ans;
 	int invalid = 1;
+	int qlen;
 	char response[MINI_BUFSZ];
 	char *str;
 
-	fflush(stdout);
+	qlen = strlen(qn) + 4;
 
+	fflush(stdout);
 	do {
-		printf("%s ", qn);
+		print_repeat('-', qlen);
+		printf("%s==> %s", color.byellow, color.nocolor);
+		printf("%s%s%s\n", color.bold, qn, color.nocolor);
+		print_repeat('-', qlen);
+		printf("%s==> %s", color.byellow, color.nocolor);
 		str = fgets(response, MINI_BUFSZ, stdin);
 
 		str = strtrim(str);

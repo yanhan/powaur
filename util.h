@@ -29,6 +29,8 @@ int getcols(void);
 char *strtrim(char *line);
 int wait_or_whine(pid_t pid, char *argv0);
 
+/* Prints c for rep times */
+void print_repeat(char c, int rep);
 void indent_print(enum pwloglevel_t lvl, alpm_list_t *list, size_t indent);
 void print_list(alpm_list_t *list, const char *prefix);
 void print_list_break(alpm_list_t *list, const char *prefix);
