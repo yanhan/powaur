@@ -17,6 +17,8 @@ char *powaur_dir;
 char *powaur_editor;
 int powaur_maxthreads;
 
+struct colorstrs color;
+
 /* Pacman configuration */
 char *pacman_rootdir;
 char *pacman_dbpath;
@@ -30,6 +32,75 @@ int setup_config(void)
 	}
 
 	return 0;
+}
+
+/* Initialize color */
+static void colors_setup(void)
+{
+	if (config->color) {
+		color.black   = xstrdup(BLACK);
+		color.red     = xstrdup(RED);
+		color.green   = xstrdup(GREEN);
+		color.yellow  = xstrdup(YELLOW);
+		color.blue    = xstrdup(BLUE);
+		color.mag     = xstrdup(MAG);
+		color.cyan    = xstrdup(CYAN);
+		color.white   = xstrdup(WHITE);
+		color.bblack  = xstrdup(BBLACK);
+		color.bred    = xstrdup(BRED);
+		color.bgreen  = xstrdup(BGREEN);
+		color.byellow = xstrdup(BYELLOW);
+		color.bblue   = xstrdup(BBLUE);
+		color.bmag    = xstrdup(BMAG);
+		color.bcyan   = xstrdup(BCYAN);
+		color.bwhite  = xstrdup(BWHITE);
+		color.nocolor = xstrdup(NOCOLOR);
+		color.bold    = xstrdup(BOLD);
+		color.votecol = xstrdup(VOTECOL);
+	} else {
+		color.black   = xstrdup("");
+		color.red     = xstrdup("");
+		color.green   = xstrdup("");
+		color.yellow  = xstrdup("");
+		color.blue    = xstrdup("");
+		color.mag     = xstrdup("");
+		color.cyan    = xstrdup("");
+		color.white   = xstrdup("");
+		color.bblack  = xstrdup("");
+		color.bred    = xstrdup("");
+		color.bgreen  = xstrdup("");
+		color.byellow = xstrdup("");
+		color.bblue   = xstrdup("");
+		color.bmag    = xstrdup("");
+		color.bcyan   = xstrdup("");
+		color.bwhite  = xstrdup("");
+		color.nocolor = xstrdup("");
+		color.bold    = xstrdup("");
+		color.votecol = xstrdup("");
+	}
+}
+
+static void colors_cleanup(void)
+{
+	free(color.black);
+	free(color.red);
+	free(color.green);
+	free(color.yellow);
+	free(color.blue);
+	free(color.mag);
+	free(color.cyan);
+	free(color.white);
+	free(color.bblack);
+	free(color.bred);
+	free(color.bgreen);
+	free(color.byellow);
+	free(color.bblue);
+	free(color.bmag);
+	free(color.bcyan);
+	free(color.bwhite);
+	free(color.nocolor);
+	free(color.bold);
+	free(color.votecol);
 }
 
 /* @param reload set to > 0 if reloading libalpm so that cachedirs can be
@@ -152,6 +223,8 @@ int setup_environment(void)
 		return -1;
 	}
 
+	colors_setup();
+
 	return setup_pacman_environment(0);
 }
 
@@ -161,6 +234,7 @@ void cleanup_environment(void)
 		config_free(config);
 	}
 
+	colors_cleanup();
 	free(powaur_editor);
 	free(powaur_dir);
 

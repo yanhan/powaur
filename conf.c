@@ -18,6 +18,7 @@ struct config_t *config_init(void)
 	conf = xcalloc(1, sizeof(struct config_t));
 	conf->op = PW_OP_MAIN;
 	conf->loglvl = PW_LOG_NORM | PW_LOG_INFO | PW_LOG_WARNING | PW_LOG_ERROR;
+	conf->color = 1;
 
 	return conf;
 }

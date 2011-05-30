@@ -347,7 +347,10 @@ static int sync_search(CURL *curl, alpm_list_t *targets)
 
 	for (i = search_results; i; i = i->next) {
 		pkg = (struct aurpkg_t *) i->data;
-		printf("aur/%s %s (%d)\n", pkg->name, pkg->version, pkg->votes);
+		printf("%saur/%s%s%s %s%s %s(%d)%s\n", color.bmag,
+			   color.nocolor, color.bold, pkg->name,
+			   color.bgreen, pkg->version,
+			   color.votecol, pkg->votes, color.nocolor);
 		printf("    %s\n", pkg->desc);
 	}
 
@@ -436,6 +439,7 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 
 		fp = fdopen(fd, "w+");
 		if (!fp) {
+			printf("NO\n");
 			error(PW_ERR_FOPEN, filename);
 			goto garbage_collect;
 		}
@@ -458,18 +462,26 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 			printf("\n");
 		}
 
-		printf("%s aur\n", REPO);
-		printf("%s %s\n", NAME, pkg->name);
-		printf("%s %s\n", VERSION, pkg->version);
-		printf("%s %s\n", URL, pkg->url);
-		printf("%s ", A_URL);
+		printf("%s%s %saur%s\n", color.bold, REPO, color.bmag, color.nocolor);
+		printf("%s%s %s%s\n", color.bold, NAME, pkg->name, color.nocolor);
+		printf("%s%s %s%s%s\n", color.bold, VERSION, color.bgreen,
+			   pkg->version, color.nocolor);
+		printf("%s%s %s%s%s\n", color.bold, URL, color.bcyan, pkg->url,
+			   color.nocolor);
+		printf("%s%s%s ", color.bold, A_URL, color.bcyan);
 		printf(AUR_PKG_URL, pkg->id);
-		printf("\n");
+		printf("%s\n", color.nocolor);
 
-		printf("%s %s\n", LICENSES, pkg->license);
-		printf("%s %d\n", A_VOTES, pkg->votes);
-		printf("%s %s\n", A_OUTOFDATE,
-			   pkg->outofdate ? "Yes" : "No");
+		printf("%s%s %s%s\n", color.bold, LICENSES, color.nocolor, pkg->license);
+		printf("%s%s %s%d\n", color.bold, A_VOTES, color.nocolor, pkg->votes);
+		printf("%s%s ", color.bold, A_OUTOFDATE);
+		if (pkg->outofdate) {
+			printf("%s%s", color.bred, "Yes");
+		} else {
+			printf("%s%s", color.nocolor, "No");
+		}
+
+		printf("%s\n", color.nocolor);
 
 		print_list(pkg->provides, PROVIDES);
 		print_list(pkg->depends, DEPS);
@@ -478,7 +490,7 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 		print_list(pkg->replaces, REPLACES);
 		print_list(pkg->arch, ARCH);
 
-		printf("%s %s\n", DESC, pkg->desc);
+		printf("%s%s%s %s\n", color.bold, DESC, color.nocolor, pkg->desc);
 
 destroy_remnants:
 		fclose(fp);

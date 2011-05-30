@@ -45,6 +45,11 @@ alpm_list_t *list_diff(alpm_list_t *left, alpm_list_t *right,
 alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 							alpm_list_fn_cmp cmpfn);
 
+/* Prints the color of a repo */
+void repo_color(const char *repo);
+
+void print_groups(alpm_list_t *grp);
+
 #define MINI_BUFSZ 60
 
 #define ASSERT(somecond, someact) do {\

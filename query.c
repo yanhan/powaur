@@ -7,6 +7,34 @@
 #include "query.h"
 #include "util.h"
 
+/* Returns a statically allocated string stating which db the pkg came from */
+static const char *which_db(alpm_list_t *syncdbs, const char *pkgname, alpm_list_t **grp)
+{
+	const char *repo = NULL;
+	alpm_list_t *i, *k;
+	pmpkg_t *spkg;
+
+	for (i = syncdbs; i && !repo; i = i->next) {
+		for (k = alpm_db_get_pkgcache(i->data); k; k = k->next) {
+			spkg = k->data;
+			if (!strcmp(alpm_pkg_get_name(spkg), pkgname)) {
+				repo = alpm_db_get_name(i->data);
+				if (grp) {
+					*grp = alpm_pkg_get_groups(spkg);
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (!repo) {
+		repo = LOCAL;
+	}
+
+	return repo;
+}
+
 /* -Qi */
 static int query_info(pmdb_t *localdb, alpm_list_t *targets)
 {
@@ -49,24 +77,25 @@ static int query_info(pmdb_t *localdb, alpm_list_t *targets)
 static int query_search(pmdb_t *localdb, const char *pkgname)
 {
 	int ret, found;
+	const char *repo;
 	alpm_list_t *i, *k, *dbcache, *groups;
+	alpm_list_t *syncdbs;
 	pmpkg_t *pkg;
 
 	dbcache = alpm_db_get_pkgcache(localdb);
+	syncdbs = alpm_option_get_syncdbs();
 
 	for (k = dbcache; k; k = k->next) {
 		pkg = k->data;
+		groups = NULL;
+
 		if (!strcmp(pkgname, alpm_pkg_get_name(pkg))) {
-			printf("local/%s %s", pkgname, alpm_pkg_get_version(pkg));
-
-			groups = alpm_pkg_get_groups(pkg);
-
-			/* Just print the 1st group */
-			if (groups) {
-				printf(" (%s)", groups->data);
-			}
-
-			printf("\n%s %s\n", TAB, alpm_pkg_get_desc(pkg));
+			repo = which_db(syncdbs, pkgname, &groups);
+			repo_color(repo);
+			printf("%s/%s%s%s %s%s", repo, color.nocolor, color.bold, pkgname,
+				   color.bgreen, alpm_pkg_get_version(pkg));
+			print_groups(groups);
+			printf("%s\n%s %s\n", color.nocolor, TAB, alpm_pkg_get_desc(pkg));
 			found = 1;
 		}
 	}
@@ -82,8 +111,8 @@ int powaur_query(alpm_list_t *targets)
 	}
 
 	alpm_list_t *dblist = NULL;
-	alpm_list_t *i, *j, *dbcache;
-	pmpkg_t *pkg;
+	alpm_list_t *i, *j, *k, *m, *dbcache;
+	pmpkg_t *pkg, *spkg;
 	int ret = 0, found;
 
 	/* -i and -s conflicting options */
@@ -102,10 +131,24 @@ int powaur_query(alpm_list_t *targets)
 		} else if (config->op_q_search) {
 			ret = pacman_db_info(dblist, PKG_FROM_LOCAL, 1);
 		} else {
+			alpm_list_t *sdbs = alpm_option_get_syncdbs();
+			alpm_list_t *grp;
+			const char *repo;
+			int found_db, grpcnt;
+
+			/* Lousy loop that makes yaourt beat us in speed */
 			for (i = alpm_db_get_pkgcache(localdb); i; i = i->next) {
 				pkg = i->data;
-				printf("%s %s\n", alpm_pkg_get_name(pkg),
+				grp = NULL;
+				repo = which_db(sdbs, alpm_pkg_get_name(pkg), &grp);
+
+				repo_color(repo);
+				printf("%s/%s%s%s %s%s", repo, color.nocolor, color.bold,
+					   alpm_pkg_get_name(pkg), color.bgreen,
 					   alpm_pkg_get_version(pkg));
+
+				print_groups(grp);
+				printf("%s\n", color.nocolor);
 			}
 		}
 

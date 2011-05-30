@@ -62,6 +62,54 @@
 #define A_URL       "AUR URL        :"
 #define A_VOTES     "Votes          :"
 #define A_OUTOFDATE "Out of Date    :"
+#define LOCAL       "local"
+
+/* Colors */
+#define BLACK    "\033[0;30m"
+#define RED      "\033[0;31m"
+#define GREEN    "\033[0;32m"
+#define YELLOW   "\033[0;33m"
+#define BLUE     "\033[0;34m"
+#define MAG      "\033[0;35m"
+#define CYAN     "\033[0;36m"
+#define WHITE    "\033[0;37m"
+
+#define BBLACK   "\033[1;30m"
+#define BRED     "\033[1;31m"
+#define BGREEN   "\033[1;32m"
+#define BYELLOW  "\033[1;33m"
+#define BBLUE    "\033[1;34m"
+#define BMAG     "\033[1;35m"
+#define BCYAN    "\033[1;36m"
+#define BWHITE   "\033[2;37m"
+
+#define NOCOLOR  "\033[0m"
+#define BOLD     "\033[1m"
+#define VOTECOL  BYELLOW
+
+struct colorstrs {
+	char *nocolor;
+	char *bold;
+	char *votecol;
+	char *black;
+	char *red;
+	char *green;
+	char *yellow;
+	char *blue;
+	char *mag;
+	char *cyan;
+	char *white;
+	char *bblack;
+	char *bred;
+	char *bgreen;
+	char *byellow;
+	char *bblue;
+	char *bmag;
+	char *bcyan;
+	char *bwhite;
+};
+
+extern struct colorstrs color;
 
 /* Global configuration */
 extern struct config_t *config;

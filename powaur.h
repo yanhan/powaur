@@ -12,12 +12,13 @@ enum {
 };
 
 enum {
-	OP_DEBUG = 1000,
+	OPT_DEBUG = 1000,
 	OPT_SORT_VOTE,
 	OPT_VERBOSE,
 	OPT_TARGET_DIR,
 	OPT_RESOLVE_DEPS,
 	OPT_MAXTHREADS,
+	OPT_NOCOLOR
 };
 
 enum pwloglevel_t {

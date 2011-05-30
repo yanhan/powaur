@@ -512,7 +512,8 @@ static void humanize_size(off_t sz, const char *prefix)
 		rem /= 10;
 	}
 
-	printf("%s %-u.%u %c\n", prefix, quo, rem, units[ptr]);
+	printf("%s%s%s %-u.%u %c\n", color.bold, prefix, color.nocolor, quo, rem,
+		   units[ptr]);
 }
 
 void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
@@ -553,12 +554,25 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 	}
 
 	if (from == PKG_FROM_SYNC) {
-		printf("%s %s\n", REPO, alpm_db_get_name(db));
+		printf("%s%s ", color.bold, REPO);
+		const char *repo = alpm_db_get_name(db);
+		if (!strcmp(repo, "core")) {
+			printf("%s", color.bred);
+		} else if (!strcmp(repo, "extra")) {
+			printf("%s", color.bgreen);
+		} else {
+			printf("%s", color.bmag);
+		}
+
+		printf("%s%s\n", repo, color.nocolor);
 	}
 
-	printf("%s %s\n", NAME, alpm_pkg_get_name(pkg));
-	printf("%s %s\n", VERSION, alpm_pkg_get_version(pkg));
-	printf("%s %s\n", URL, alpm_pkg_get_url(pkg));
+	printf("%s%s%s %s%s%s\n", color.bold, NAME, color.nocolor,
+		   color.bold, alpm_pkg_get_name(pkg), color.nocolor);
+	printf("%s%s %s%s%s\n", color.bold, VERSION, color.bgreen,
+		   alpm_pkg_get_version(pkg), color.nocolor);
+	printf("%s%s %s%s%s\n", color.bold, URL, color.bcyan,
+		   alpm_pkg_get_url(pkg), color.nocolor);
 
 	print_list(alpm_pkg_get_licenses(pkg), LICENSES);
 	print_list(alpm_pkg_get_groups(pkg), GROUPS);
@@ -580,14 +594,15 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 	}
 
 	humanize_size(alpm_pkg_get_isize(pkg), INSTSZ);
-	printf("%s %s\n", PKGER, alpm_pkg_get_packager(pkg));
-	printf("%s %s\n", ARCH, alpm_pkg_get_arch(pkg));
-	printf("%s %s\n", BDATE, builddate);
+	printf("%s%s%s %s\n", color.bold, PKGER, color.nocolor,
+		   alpm_pkg_get_packager(pkg));
+	printf("%s%s%s %s\n", color.bold, ARCH, color.nocolor, alpm_pkg_get_arch(pkg));
+	printf("%s%s%s %s\n", color.bold, BDATE, color.nocolor, builddate);
 
 	if (from == PKG_FROM_LOCAL) {
-		printf("%s %s\n", IDATE, installdate);
+		printf("%s%s%s %s\n", color.bold, IDATE, color.nocolor, installdate);
 
-		printf("%s ", REASON);
+		printf("%s%s%s ", color.bold, REASON, color.nocolor);
 		switch (reason) {
 		case PM_PKG_REASON_EXPLICIT:
 			printf("Explicitly installed");
@@ -601,13 +616,15 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 		}
 
 		printf("\n");
-		printf("%s %s\n", SCRIPT, has_script ? "Yes" : "No");
+		printf("%s%s%s %s\n", color.bold, SCRIPT, color.nocolor,
+			   has_script ? "Yes" : "No");
 	}
 
 	if (from == PKG_FROM_SYNC) {
-		printf("%s %s\n", MD5SUM, alpm_pkg_get_md5sum(pkg));
+		printf("%s%s%s %s\n", color.bold, MD5SUM, color.nocolor,
+			   alpm_pkg_get_md5sum(pkg));
 	}
 
-	printf("%s %s\n", DESC, alpm_pkg_get_desc(pkg));
+	printf("%s%s%s %s\n", color.bold, DESC, color.nocolor, alpm_pkg_get_desc(pkg));
 	FREELIST(results);
 }

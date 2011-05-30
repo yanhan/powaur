@@ -11,6 +11,7 @@ struct config_t {
 
 	unsigned help: 1;
 	unsigned version: 1;
+	unsigned color: 1;
 
 	/* Query options */
 	unsigned op_q_info: 1;

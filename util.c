@@ -237,7 +237,7 @@ void print_list(alpm_list_t *list, const char *prefix)
 	size_t indent, curcols, newlen;
 
 	size_t cols = getcols();
-	printf("%s ", prefix);
+	printf("%s%s%s ", color.bold, prefix, color.nocolor);
 
 	if (!list) {
 		printf("None\n");
@@ -276,7 +276,7 @@ void print_list_deps(alpm_list_t *list, const char *prefix)
 	size_t depstrlen;
 	char *depstr;
 
-	printf("%s ", prefix);
+	printf("%s%s%s ", color.bold, prefix, color.nocolor);
 	if (!list) {
 		printf("None\n");
 		return;
@@ -321,7 +321,7 @@ void print_list_break(alpm_list_t *list, const char *prefix)
 	alpm_list_t *i;
 	size_t indent;
 
-	printf("%s ", prefix);
+	printf("%s%s%s ", color.bold, prefix, color.nocolor);
 	if (!list) {
 		printf("None\n");
 		return;
@@ -553,6 +553,39 @@ alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 	}
 
 	return intersect;
+}
+
+void repo_color(const char *repo)
+{
+	if (!strcmp(repo, "core")) {
+		printf("%s", color.bred);
+	} else if (!strcmp(repo, "extra")) {
+		printf("%s", color.bgreen);
+	} else if (!strcmp(repo, "local")) {
+		printf("%s", color.byellow);
+	} else {
+		printf("%s", color.bmag);
+	}
+}
+
+void print_groups(alpm_list_t *grp)
+{
+	if (!grp) {
+		return;
+	}
+
+	alpm_list_t *i;
+	int cnt = 0;
+
+	printf(" %s(", color.bblue);
+	for (i = grp; i; i = i->next) {
+		if (cnt++) {
+			printf(" ");
+		}
+
+		printf("%s", i->data);
+	}
+	printf(")%s", color.nocolor);
 }
 
 /* Writes a directory to an archive */

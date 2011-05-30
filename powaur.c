@@ -217,7 +217,7 @@ static int parsearg_get(int option)
 static int parsearg_global(int option)
 {
 	switch (option) {
-	case OP_DEBUG:
+	case OPT_DEBUG:
 		config->loglvl |= PW_LOG_DEBUG;
 		break;
 	case OPT_SORT_VOTE:
@@ -232,6 +232,9 @@ static int parsearg_global(int option)
 	case OPT_MAXTHREADS:
 		config->opt_maxthreads = 1;
 		powaur_maxthreads = atoi(optarg);
+		break;
+	case OPT_NOCOLOR:
+		config->color = 0;
 		break;
 	default:
 		return -1;
@@ -259,7 +262,8 @@ static int parseargs(int argc, char *argv[])
 		{"help", no_argument, NULL, 'h'},
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
-		{"debug", no_argument, NULL, OP_DEBUG},
+		{"debug", no_argument, NULL, OPT_DEBUG},
+		{"nocolor", no_argument, NULL, OPT_NOCOLOR},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},
 		{"verbose", no_argument, NULL, OPT_VERBOSE},
 		{"target", required_argument, NULL, OPT_TARGET_DIR},
@@ -361,6 +365,11 @@ int main(int argc, char *argv[])
 	ret = parseargs(argc, argv);
 	if (ret) {
 		goto cleanup;
+	}
+
+	/* If stdout is not terminal, turn off colourized output */
+	if (!isatty(1)) {
+		config->color = 0;
 	}
 
 	ret = powaur_init();
