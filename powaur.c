@@ -114,6 +114,8 @@ static void usage(unsigned short op)
 
 		printf("      --debug                display debug messages\n");
 		printf("      --verbose              display more messages\n");
+		printf("      --color                Switches on color\n");
+		printf("      --no-color             Switches off color\n");
 	}
 
 cleanup:
@@ -233,8 +235,17 @@ static int parsearg_global(int option)
 		config->opt_maxthreads = 1;
 		powaur_maxthreads = atoi(optarg);
 		break;
+	case OPT_COLOR:
+		if (!config->color_set) {
+			++config->color;
+			config->color_set = 1;
+		}
+		break;
 	case OPT_NOCOLOR:
-		config->color = 0;
+		if (!config->nocolor_set) {
+			--config->color;
+			config->nocolor_set = 1;
+		}
 		break;
 	default:
 		return -1;
@@ -262,6 +273,7 @@ static int parseargs(int argc, char *argv[])
 		{"help", no_argument, NULL, 'h'},
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
+		{"color", no_argument, NULL, OPT_COLOR},
 		{"debug", no_argument, NULL, OPT_DEBUG},
 		{"nocolor", no_argument, NULL, OPT_NOCOLOR},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},

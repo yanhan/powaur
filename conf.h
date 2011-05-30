@@ -9,9 +9,12 @@ struct config_t {
 	unsigned short op;
 	enum pwloglevel_t loglvl;
 
+	char *target_dir;
+	unsigned short maxthreads;
+	unsigned short color;
+
 	unsigned help: 1;
 	unsigned version: 1;
-	unsigned color: 1;
 
 	/* Query options */
 	unsigned op_q_info: 1;
@@ -28,9 +31,8 @@ struct config_t {
 	unsigned sort_votes: 1;
 	unsigned verbose: 1;
 	unsigned opt_maxthreads: 1;
-
-	char *target_dir;
-	int maxthreads;
+	unsigned color_set: 1;
+	unsigned nocolor_set: 1;
 };
 
 struct config_t *config_init(void);

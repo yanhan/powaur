@@ -91,6 +91,15 @@ void parse_powaur_config(FILE *fp)
 			if (powaur_maxthreads < 1 || powaur_maxthreads > PW_DEF_MAXTHREADS) {
 				powaur_maxthreads = 0;
 			}
+
+		} else if (!strcmp(key, "Color")) {
+			if (!strcmp(val, "Off") && config->color > 0) {
+				--config->color;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed Color = Off\n", TAB, TAB);
+			} else if (!strcmp(val, "On")) {
+				++config->color;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed Color = On\n", TAB, TAB);
+			}
 		}
 	}
 }
