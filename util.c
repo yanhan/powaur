@@ -703,21 +703,21 @@ int powaur_backup(alpm_list_t *targets)
 	localtime_r(&time_now, &tm_st);
 	strftime(backup, MINI_BUFSZ, "pacman-%Y-%m-%d_%Hh%M.tar.bz2", &tm_st);
 
-	/* Get full path */
-	if (targets) {
-		snprintf(backup_dest, PATH_MAX, "%s/%s", targets->data, backup);
-	} else {
-		snprintf(backup_dest, PATH_MAX, "%s", backup);
-	}
-
-	if (archive_write_open_filename(a, backup_dest) != ARCHIVE_OK) {
-		PW_SETERRNO(PW_ERR_ARCHIVE_OPEN);
+	if (!getcwd(cwd, PATH_MAX)) {
+		error(PW_ERR_GETCWD);
 		ret = -1;
 		goto cleanup;
 	}
 
-	if (!getcwd(cwd, PATH_MAX)) {
-		error(PW_ERR_GETCWD);
+	/* Get full path */
+	if (targets) {
+		snprintf(backup_dest, PATH_MAX, "%s/%s", targets->data, backup);
+	} else {
+		snprintf(backup_dest, PATH_MAX, "%s/%s", cwd, backup);
+	}
+
+	if (archive_write_open_filename(a, backup_dest) != ARCHIVE_OK) {
+		PW_SETERRNO(PW_ERR_ARCHIVE_OPEN);
 		ret = -1;
 		goto cleanup;
 	}
