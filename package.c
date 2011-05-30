@@ -450,32 +450,105 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 	return newdeps;
 }
 
-/* Akin to yaourt -Si / pacman -Si.
- * Dumps info from sync dbs and returns.
+/* Returns a statically allocated string stating which db the pkg came from
+ * @param sdbs sync dbs
+ * @param pkgname package to search for
+ * @param grp pointer to alpm_list_t * used to store the pkg's groups if any
  */
-int pacman_db_info(alpm_list_t *dbs, enum pkgfrom_t from, int search)
+const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp)
+{
+	const char *repo = NULL;
+	alpm_list_t *i, *k;
+	pmpkg_t *spkg;
+
+	for (i = sdbs; i && !repo; i = i->next) {
+		for (k = alpm_db_get_pkgcache(i->data); k; k = k->next) {
+			spkg = k->data;
+			if (!strcmp(alpm_pkg_get_name(spkg), pkgname)) {
+				repo = alpm_db_get_name(i->data);
+				if (grp) {
+					*grp = alpm_pkg_get_groups(spkg);
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (!repo) {
+		repo = LOCAL;
+	}
+
+	return repo;
+}
+
+/* For plain -Q, -Qs, -Ss */
+void print_pkg_pretty(alpm_list_t *sdbs, pmpkg_t *pkg, enum dumplvl_t lvl)
+{
+	alpm_list_t *grp = NULL;
+	const char *repo;
+	int found_db, grpcnt;
+
+	repo = which_db(sdbs, alpm_pkg_get_name(pkg), &grp);
+	color_repo(repo);
+	printf("%s%s %s%s%s", color.bold, alpm_pkg_get_name(pkg),
+		   color.bgreen, alpm_pkg_get_version(pkg), color.nocolor);
+
+	color_groups(grp);
+
+	if (lvl == DUMP_Q_SEARCH) {
+		printf("%s%s\n", TAB, alpm_pkg_get_desc(pkg));
+	} else if (lvl == DUMP_S_SEARCH) {
+		printf("%s%s", TAB, alpm_pkg_get_desc(pkg));
+	}
+}
+
+/* Dumps info from dbs and returns.
+ */
+int pacman_db_dump(enum pkgfrom_t from, enum dumplvl_t lvl)
 {
 	int cnt = 0;
-	alpm_list_t *i, *j;
+	alpm_list_t *i, *j, *dbs, *syncdbs;
+	const char *repo;
 
-	pmdb_t *db;
+	pmdb_t *localdb, *db;
 	pmpkg_t *pkg;
 	pmdepend_t *dep;
 
-	if (search) {
-		for (i = dbs; i; i = i->next) {
-			db = i->data;
-			for (j = alpm_db_get_pkgcache(db); j; j = j->next) {
-				pkg = j->data;
-				printf("%s/%s %s\n%s%s\n", alpm_db_get_name(db),
-					   alpm_pkg_get_name(pkg), alpm_pkg_get_version(pkg), TAB,
-					   alpm_pkg_get_desc(pkg));
-			}
-		}
-
-		return 0;
+	switch (lvl) {
+	case DUMP_Q:
+	case DUMP_Q_SEARCH:
+	case DUMP_Q_INFO:
+		localdb = alpm_option_get_localdb();
+		syncdbs = alpm_option_get_syncdbs();
+		break;
+	case DUMP_S_SEARCH:
+	case DUMP_S_INFO:
+		dbs = alpm_option_get_syncdbs();
+		break;
 	}
 
+	if (lvl == DUMP_S_SEARCH || lvl == DUMP_S_INFO) {
+		goto dump_sync;
+	}
+
+	/* -Qi */
+	if (lvl == DUMP_Q_INFO) {
+		for (i = alpm_db_get_pkgcache(localdb); i; i = i->next) {
+			pacman_pkgdump(i->data, PKG_FROM_LOCAL);
+		}
+	} else {
+		/* plain -Q and -Qs */
+		for (j = alpm_db_get_pkgcache(localdb); j; j = j->next) {
+			pkg = j->data;
+			print_pkg_pretty(syncdbs, pkg, lvl);
+		}
+	}
+
+	goto done;
+
+dump_sync:
+	/* -S */
 	for (i = dbs; i; i = i->next) {
 		db = i->data;
 
@@ -485,9 +558,20 @@ int pacman_db_info(alpm_list_t *dbs, enum pkgfrom_t from, int search)
 			}
 
 			pkg = j->data;
-			pacman_pkgdump(pkg, from);
+			if (lvl == DUMP_S_INFO) {
+				pacman_pkgdump(pkg, from);
+			} else {
+				/* -Ss */
+				print_pkg_pretty(dbs, pkg, lvl);
+			}
 		}
 	}
+
+done:
+	if (lvl != DUMP_Q && lvl != DUMP_Q_SEARCH) {
+		printf("\n");
+	}
+	return 0;
 }
 
 static void humanize_size(off_t sz, const char *prefix)

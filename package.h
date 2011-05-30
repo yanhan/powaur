@@ -53,7 +53,16 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp);
 
 alpm_list_t *resolve_dependencies(alpm_list_t *packages);
 
-int pacman_db_info(alpm_list_t *dbs, enum pkgfrom_t from, int search);
+/* Returns a statically allocated string indicating wich db the pkg came from */
+const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp);
+
+/* Prints pretty pkg, for plain -Q, -Qs, -Ss */
+void print_pkg_pretty(alpm_list_t *sdbs, pmpkg_t *pkg, enum dumplvl_t lvl);
+
+/* Dumps entire pacman database, for -Q, -Qi, -Qs, -Si, -Ss w/o targets */
+int pacman_db_dump(enum pkgfrom_t from, enum dumplvl_t lvl);
+
+/* Dumps a pacman package, for -Qi and -Si */
 void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from);
 
 #endif

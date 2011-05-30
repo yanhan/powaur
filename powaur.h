@@ -104,4 +104,12 @@ enum _pw_errno_t {
 	PW_ERR_TARGETS_NULL
 };
 
+enum dumplvl_t {
+	DUMP_Q,
+	DUMP_Q_SEARCH,
+	DUMP_Q_INFO,
+	DUMP_S_SEARCH,
+	DUMP_S_INFO
+};
+
 #endif

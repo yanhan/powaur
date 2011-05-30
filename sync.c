@@ -539,9 +539,9 @@ int powaur_sync(alpm_list_t *targets)
 
 	if (targets == NULL) {
 		if (config->op_s_search) {
-			ret = pacman_db_info(alpm_option_get_syncdbs(), PKG_FROM_SYNC, 1);
+			ret = pacman_db_dump(PKG_FROM_SYNC, DUMP_S_SEARCH);
 		} else if (config->op_s_info) {
-			ret = pacman_db_info(alpm_option_get_syncdbs(), PKG_FROM_SYNC, 0);
+			ret = pacman_db_dump(PKG_FROM_SYNC, DUMP_S_INFO);
 		} else {
 			pw_fprintf(PW_LOG_ERROR, stderr, "No targets specified for sync\n");
 			ret = -1;

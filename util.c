@@ -555,7 +555,7 @@ alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 	return intersect;
 }
 
-void repo_color(const char *repo)
+void color_repo(const char *repo)
 {
 	if (!strcmp(repo, "core")) {
 		printf("%s", color.bred);
@@ -566,11 +566,14 @@ void repo_color(const char *repo)
 	} else {
 		printf("%s", color.bmag);
 	}
+
+	printf("%s/%s", repo, color.nocolor);
 }
 
-void print_groups(alpm_list_t *grp)
+void color_groups(alpm_list_t *grp)
 {
 	if (!grp) {
+		printf("%s\n", color.nocolor);
 		return;
 	}
 
@@ -585,7 +588,7 @@ void print_groups(alpm_list_t *grp)
 
 		printf("%s", i->data);
 	}
-	printf(")%s", color.nocolor);
+	printf(")%s\n", color.nocolor);
 }
 
 /* Writes a directory to an archive */
