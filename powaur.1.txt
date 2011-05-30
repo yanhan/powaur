@@ -1,4 +1,4 @@
-.TH POWAUR 1 "26-05-2011" "powaur" "powaur manual"
+.TH POWAUR 1 "31-05-2011" "powaur" "powaur manual"
 .SH NAME
 powaur \- an AUR helper with a pacman-like interface
 .SH SYNOPSIS
@@ -47,8 +47,18 @@ Displays help message and exits.
 Displays version information and exits.
 .SH OPTIONS
 .TP
+.B "--color"
+Enables colorized output. This option can be supplied many times but the effect
+will be the same as if it was supplied once. If --nocolor is supplied, the
+effect of this option is nullified.
+.TP
 .B "--debug"
 Display debug messages.
+.TP
+.B "--nocolor"
+Disables colorized output. This option can be supplied many times but the
+effect will be the same as if it was supplied once. If --color is supplied, the
+effect of this option is nullified.
 .TP
 .B "--threads <N>"
 Limits powaur to spawn up to a maximum of N threads. Currently, mutli-threading
@@ -119,6 +129,17 @@ followed by:
 configuration settings, powaur will fallback to using the defaults.
 .P
 A sample config file can be found at /usr/share/powaur/powaur.conf
+.SH Colorized Output
+By default, powaur's output is colorized. Thus, "color" starts with a value
+of 1.
+.P
+The --color flag and "Color" option when set to "On" in powaur.conf increases
+the value of "color" by 1.
+.P
+The --nocolor flag and "Color" option when set to "Off" in powaur.conf increases
+the value of "color" by 1.
+.P
+If the final value of "color" is greater than 0, then output is colorized.
 .SH CREDITS
 Dave Reisner - For his kind permission to let powaur use code from cower
 .P

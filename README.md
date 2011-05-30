@@ -11,6 +11,7 @@ Currently, powaur supports:
 - Querying local and sync databases for package information
 - Installing packages from the AUR (no dependency resolution)
 - Backing up your pacman local database
+- Colorized output (new in v0.1.3)
 
 Unlike full featured AUR helpers such as clyde, powaur is not meant to
 replace pacman. 
