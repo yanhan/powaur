@@ -156,7 +156,8 @@ int pkginfo_mod_cmp(const void *a, const void *b)
  * So if it really barfs on smth, pls check the PKGBUILD.
  */
 
-/* TODO: Handle ">=" for depends, provides, etc, ":" for optdepends
+/* TODO: Return version string for >=, >, <, =.
+ * TODO: provides, etc, ":" for optdepends
  * Refer to https://wiki.archlinux.org/index.php/Pkgbuild for details.
  */
 static void parse_bash_array(alpm_list_t **list, FILE *fp,
@@ -215,6 +216,16 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 			if (preserve_ver) {
 				*list = alpm_list_add(*list, strdup(token));
 			} else {
+				/* This is all just a quick hack.
+				 * What really needs to be done is to return the version
+				 * string as well.
+				 */
+				tmpstr = strchr(token, '<');
+				if (tmpstr) {
+					*tmpstr = 0;
+					token = strtrim(token);
+				}
+
 				tmpstr = strchr(token, '>');
 				if (tmpstr) {
 					*tmpstr = 0;
