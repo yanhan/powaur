@@ -30,16 +30,41 @@ POWAUR-VERSION-FILE: FORCE
 	@$(SHELL) ./POWAUR-VERSION-GEN
 -include POWAUR-VERSION-FILE
 
-SRC=conf.c curl.c download.c environment.c error.c handle.c json.c package.c \
-	powaur.c query.c sync.c wrapper.c util.c
+# Guard against environment variables
+SRC=
+HDRS=
+OBJS=
+DIST_FILES=
 
-HDRS=conf.h curl.h download.h environment.h error.h handle.h json.h package.h \
-	 powaur.h query.h sync.h wrapper.h util.h
+SRC+=conf.c
+SRC+=curl.c
+SRC+=download.c
+SRC+=environment.c
+SRC+=error.c
+SRC+=handle.c
+SRC+=json.c
+SRC+=package.c
+SRC+=powaur.c
+SRC+=query.c
+SRC+=sync.c
+SRC+=wrapper.c
+SRC+=util.c
 
+HDRS=$(SRC:.c=.h)
 OBJS=$(SRC:.c=.o)
 
-DIST_FILES=$(SRC) $(HDRS) POWAUR-VERSION-GEN configure config.h.in Makefile.in \
-		   powaur.1.txt powaur.conf COPYING INSTALL NEWS README.md TECHNICAL
+DIST_FILES=$(SRC) $(HDRS)
+DIST_FILES+=POWAUR-VERSION-GEN
+DIST_FILES+=configure
+DIST_FILES+=config.h.in
+DIST_FILES+=Makefile.in
+DIST_FILES+=powaur.1.txt
+DIST_FILES+=powaur.conf
+DIST_FILES+=COPYING
+DIST_FILES+=INSTALL
+DIST_FILES+=NEWS
+DIST_FILES+=README.md
+DIST_FILES+=TECHNICAL
 
 all:: powaur
 
