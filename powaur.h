@@ -19,7 +19,8 @@ enum {
 	OPT_RESOLVE_DEPS,
 	OPT_MAXTHREADS,
 	OPT_COLOR,
-	OPT_NOCOLOR
+	OPT_NOCOLOR,
+	OPT_CHECK_AUR
 };
 
 enum pwloglevel_t {

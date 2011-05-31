@@ -516,6 +516,131 @@ cleanup:
 	return found ? 0 : -1;
 }
 
+/* TODO: Finish dependency resolution
+ * -Su, experimental feature
+ * @param targets list of struct aurpkg_t *
+ */
+static int upgrade_pkgs(alpm_list_t *targets)
+{
+	alpm_list_t *i;
+	for (i = targets; i; i = i->next) {
+	}
+
+	return 0;
+}
+
+/* Returns a list of outdated AUR packages.
+ * The list and the packages are to be freed by the caller.
+ */
+static alpm_list_t *get_outdated_pkgs(CURL *curl, alpm_list_t *targets)
+{
+	alpm_list_t *i, *dbcache, *syncdbs;
+	alpm_list_t *newtargs = NULL;
+	alpm_list_t *outdated_pkgs = NULL;
+	alpm_list_t *pkglist;
+	pmdb_t *localdb;
+	pmpkg_t *lpkg;
+	struct aurpkg_t *aurpkg;
+	const char *pkgname, *pkgver;
+
+	localdb = alpm_option_get_localdb();
+	if (!localdb) {
+		error(PW_ERR_LOCALDB_NULL);
+		return NULL;
+	}
+
+	dbcache = alpm_db_get_pkgcache(localdb);
+	if (!dbcache) {
+		error(PW_ERR_LOCALDB_CACHE_NULL);
+		return NULL;
+	}
+
+	syncdbs = alpm_option_get_syncdbs();
+
+	/* For specific checks, see if the packages actually exist in localdb */
+	if (targets) {
+		for (i = targets; i; i = i->next) {
+			lpkg = cache_find_pkg(dbcache, i->data);
+			if (lpkg) {
+				newtargs = alpm_list_add(newtargs, lpkg);
+			}
+		}
+
+		i = newtargs;
+	} else {
+		/* Check ALL localdb packages */
+		i = dbcache;
+	}
+
+	for (; i; i = i->next) {
+		lpkg = i->data;
+		pkgname = alpm_pkg_get_name(lpkg);
+		pkgver = alpm_pkg_get_version(lpkg);
+
+		/* If pkg is not found in any sync db, it is from AUR */
+		lpkg = dbs_find_pkg(syncdbs, pkgname);
+		if (lpkg) {
+			continue;
+		}
+
+		pkglist = query_aur(curl, pkgname, AUR_QUERY_INFO);
+		if (!pkglist) {
+			continue;
+		}
+
+		aurpkg = pkglist->data;
+		if (alpm_pkg_vercmp(aurpkg->version, pkgver) > 0) {
+			/* Just show outdated package for now */
+			pw_printf(PW_LOG_INFO, "%s %s is outdated, %s is available\n",
+					  pkgname, pkgver, aurpkg->version);
+
+			/* Add to upgrade list */
+			outdated_pkgs = alpm_list_add(outdated_pkgs, aurpkg);
+			pkglist->data = NULL;
+		} else if (config->verbose) {
+			pw_printf(PW_LOG_INFO, "%s %s is up to date.\n", pkgname,
+					  pkgver);
+		}
+
+		alpm_list_free_inner(pkglist, (alpm_list_fn_free) aurpkg_free);
+		alpm_list_free(pkglist);
+	}
+
+	alpm_list_free(newtargs);
+	return outdated_pkgs;
+}
+
+/* -Su, checks AUR packages */
+static int sync_upgrade(CURL *curl, alpm_list_t *targets)
+{
+	int ret = 0;
+	int upgrade_all;
+	alpm_list_t *outdated_pkgs = NULL;
+
+	outdated_pkgs = get_outdated_pkgs(curl, targets);
+
+	/* --check, don't upgrade */
+	if (config->op_s_check) {
+		goto cleanup;
+	}
+
+	printf("\n");
+	pw_printf(PW_LOG_INFO, "Targets:\n");
+	print_aurpkg_list(outdated_pkgs);
+	printf("\n");
+
+	upgrade_all = yesno("Do you wish to upgrade the above packages?");
+	if (upgrade_all) {
+		/* Experimental */
+		/* ret = upgrade_pkgs(outdated_pkgs); */
+	}
+
+cleanup:
+	alpm_list_free_inner(outdated_pkgs, (alpm_list_fn_free) aurpkg_free);
+	alpm_list_free(outdated_pkgs);
+	return ret;
+}
+
 /* returns 0 upon success.
  * returns -1 upon failure to change dir / download PKGBUILD / install package
  */
@@ -530,11 +655,32 @@ int powaur_sync(alpm_list_t *targets)
 	char orgdir[PATH_MAX];
 	CURL *curl;
 
+	freelist = NULL;
+	nonzero_install = org_installed = dl_failed = final_targets = NULL;
+	success = failure = NULL;
+	ret = status = 0;
+
+	curl = curl_easy_new();
+	if (!curl) {
+		return error(PW_ERR_CURL_INIT);
+	}
+
 	/* Makes no sense to run info and search tgt */
 	if (config->op_s_search && config->op_s_info) {
 		pw_fprintf(PW_LOG_ERROR, stderr,
 				   "-s (search) and -i (info) are mutually exclusive\n");
-		return -1;
+		ret = -1;
+		goto final_cleanup;
+	} else if (config->op_s_check && !config->op_s_upgrade) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "--check must be used with -u!\n");
+		ret = -1;
+		goto final_cleanup;
+	}
+
+	/* -Su, checks packages against AUR */
+	if (config->op_s_upgrade) {
+		ret = sync_upgrade(curl, targets);
+		goto final_cleanup;
 	}
 
 	if (targets == NULL) {
@@ -547,17 +693,7 @@ int powaur_sync(alpm_list_t *targets)
 			ret = -1;
 		}
 
-		return ret;
-	}
-
-	freelist = NULL;
-	nonzero_install = org_installed = dl_failed = final_targets = NULL;
-	success = failure = NULL;
-	ret = status = 0;
-
-	curl = curl_easy_new();
-	if (!curl) {
-		return error(PW_ERR_CURL_INIT);
+		goto final_cleanup;
 	}
 
 	if (config->op_s_search) {
@@ -571,7 +707,8 @@ int powaur_sync(alpm_list_t *targets)
 
 	/* Save our current directory */
 	if (!getcwd(orgdir, PATH_MAX)) {
-		return error(PW_ERR_GETCWD);
+		ret = error(PW_ERR_GETCWD);
+		goto final_cleanup;
 	}
 
 	if (ret = chdir(powaur_dir)) {

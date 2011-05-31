@@ -109,6 +109,7 @@ static void usage(unsigned short op)
 		}
 
 		if (op == PW_OP_SYNC) {
+			printf("      --check                Works with -u, checks for outdated packages without upgrading\n");
 			printf("      --vote                 order search results by votes\n");
 		}
 
@@ -176,6 +177,12 @@ static int parsearg_sync(int option)
 		break;
 	case 's':
 		config->op_s_search = 1;
+		break;
+	case 'u':
+		config->op_s_upgrade = 1;
+		break;
+	case OPT_CHECK_AUR:
+		config->op_s_check = 1;
 		break;
 	default:
 		return -1;
@@ -261,7 +268,7 @@ static int parseargs(int argc, char *argv[])
 	int opt, option_index = 0;
 	int res;
 
-	const char *optstring = "BGMQSVhisw";
+	const char *optstring = "BGMQSVhisuw";
 
 	static struct option opts[] = {
 		{"backup", no_argument, NULL, 'B'},
@@ -273,7 +280,9 @@ static int parseargs(int argc, char *argv[])
 		{"help", no_argument, NULL, 'h'},
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
+		{"upgrade", no_argument, NULL, 'u'},
 		{"color", no_argument, NULL, OPT_COLOR},
+		{"check", no_argument, NULL, OPT_CHECK_AUR},
 		{"debug", no_argument, NULL, OPT_DEBUG},
 		{"nocolor", no_argument, NULL, OPT_NOCOLOR},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},

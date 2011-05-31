@@ -23,6 +23,8 @@ struct config_t {
 	/* Sync options */
 	unsigned op_s_info: 1;
 	unsigned op_s_search: 1;
+	unsigned op_s_upgrade: 1;
+	unsigned op_s_check: 1;
 
 	/* -G options */
 	unsigned op_g_resolve: 1;

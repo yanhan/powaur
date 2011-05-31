@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <alpm_list.h>
+#include <alpm.h>
 
 #include "error.h"
 #include "powaur.h"
@@ -43,7 +43,20 @@ void print_list_break(alpm_list_t *list, const char *prefix);
 void print_list_deps(alpm_list_t *list, const char *prefix);
 void print_pkginfo(alpm_list_t *list);
 
+/* Prints a list of aurpkg_t * */
+void print_aurpkg_list(alpm_list_t *list);
+
+/* Returns 1 for yes, 0 for no */
 int yesno(const char *fmt, ...);
+
+/* Asks the user a multiple choice question.
+ * returns the index of array corresponding to user's answer.
+ *
+ * @param qn question to ask
+ * @param array a character array of options
+ * @param arraySize size of array
+ * @param preset index of answer to return if user just presses Enter
+ */
 int mcq(const char *qn, const char *array, int arraySize, int preset);
 
 char *have_dotinstall(void);
@@ -52,6 +65,18 @@ alpm_list_t *list_diff(alpm_list_t *left, alpm_list_t *right,
 
 alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 							alpm_list_fn_cmp cmpfn);
+
+/* Returns a pmpkg_t * if given package is found in dbcache.
+ * @param dbcache list of pmpkg_t *
+ * @param pkgname package name
+ */
+pmpkg_t *cache_find_pkg(alpm_list_t *dbcache, const char *pkgname);
+
+/* Returns a pmpkg_t * if given package is found in any of the dbs.
+ * @param dbs list of pmdb_t *
+ * @param pkgname package name
+ */
+pmpkg_t *dbs_find_pkg(alpm_list_t *dbs, const char *pkgname);
 
 /* Prints the color of a repo */
 void color_repo(const char *repo);

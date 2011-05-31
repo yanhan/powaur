@@ -504,6 +504,39 @@ void print_pkginfo(alpm_list_t *list)
 	printf("\n");
 }
 
+void print_aurpkg_list(alpm_list_t *list)
+{
+	alpm_list_t *i;
+	struct aurpkg_t *pkg;
+	const char *pkgname, *pkgver;
+	size_t cols, curcols, pkglen;
+
+	cols = getcols();
+	curcols = 0;
+
+	for (i = list; i; i = i->next) {
+		pkg = i->data;
+		pkgname = pkg->name;
+		pkgver = pkg->version;
+
+		pkglen = strlen(pkgname) + 1 + strlen(pkgver);
+		if (curcols + pkglen > cols) {
+			printf("\n");
+			curcols = 0;
+		}
+
+		if (curcols == 0) {
+			printf("%s %s", pkgname, pkgver);
+			curcols = pkglen;
+		} else {
+			printf("  %s %s", pkgname, pkgver);
+			curcols += pkglen + 2;
+		}
+	}
+
+	printf("\n");
+}
+
 /* From pacman */
 int yesno(const char *fmt, ...)
 {
@@ -660,6 +693,38 @@ alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
 	}
 
 	return intersect;
+}
+
+pmpkg_t *cache_find_pkg(alpm_list_t *dbcache, const char *pkgname)
+{
+	alpm_list_t *i;
+	pmpkg_t *pkg;
+
+	for (i = dbcache; i; i = i->next) {
+		pkg = i->data;
+		if (!strcmp(alpm_pkg_get_name(pkg), pkgname)) {
+			return pkg;
+		}
+	}
+
+	return NULL;
+}
+
+pmpkg_t *dbs_find_pkg(alpm_list_t *dbs, const char *pkgname)
+{
+	alpm_list_t *i;
+	pmdb_t *db;
+	pmpkg_t *pkg;
+
+	for (i = dbs; i; i = i->next) {
+		db = i->data;
+		pkg = alpm_db_get_pkg(db, pkgname);
+		if (pkg) {
+			return pkg;
+		}
+	}
+
+	return NULL;
 }
 
 void color_repo(const char *repo)

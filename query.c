@@ -112,9 +112,6 @@ int powaur_query(alpm_list_t *targets)
 			 * repo/pkg ver (grp)
 			 */
 			ret = pacman_db_dump(PKG_FROM_LOCAL, DUMP_Q);
-
-			#ifdef someshit
-			#endif
 		}
 
 		alpm_list_free(dblist);
