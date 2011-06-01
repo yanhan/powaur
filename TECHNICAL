@@ -110,4 +110,17 @@ In the case that not all settings are specified in the config file, powaur
 wll fall back to defaults for those unspecified settings.
 
 
+---------------------------------
+DEPENDENCY RESOLUTION for -G flag
+---------------------------------
+
+The -G flag supports a limited form of dependency resolution. It DOES NOT
+recognize version strings, ie. to say if you have something like:
+
+pacman>=3.5
+
+inside a PKGBUILD, powaur recognizes the "pacman" part and discards the version
+string.
+
+
 That's all for now. Thanks for reading!
