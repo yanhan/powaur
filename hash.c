@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "hash.h"
 #include "wrapper.h"
@@ -159,4 +160,17 @@ void *hash_search(struct hash_table *htable, void *data)
 	
 	entry = hash_lookup(hash, htable, data);
 	return entry? entry->data : NULL;
+}
+
+int hash_pos(struct hash_table *htable, void *data)
+{
+	struct hash_table_entry *entry;
+	unsigned long hash = htable->hash(data);
+	entry = hash_lookup(hash, htable, data);
+
+	if (entry) {
+		return entry - htable->table;
+	}
+
+	return -1;
 }
