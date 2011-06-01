@@ -763,6 +763,22 @@ void color_groups(alpm_list_t *grp)
 	printf(")%s\n", color.nocolor);
 }
 
+unsigned long sdbm(const char *str)
+{
+	unsigned int hash = 0;
+	int c;
+
+	if (!str) {
+		return hash;
+	}
+
+	while (c = *str++) {
+		hash = c + (hash << 6) + (hash << 16) - hash;
+	}
+
+	return hash;
+}
+
 /* Writes a directory to an archive */
 static int write_dir_archive(char *dirname, struct archive *a)
 {
