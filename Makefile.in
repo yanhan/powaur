@@ -42,6 +42,7 @@ SRC+=download.c
 SRC+=environment.c
 SRC+=error.c
 SRC+=handle.c
+SRC+=hash.c
 SRC+=json.c
 SRC+=package.c
 SRC+=powaur.c
@@ -81,6 +82,7 @@ conf.o environment.o query.o: conf.h
 download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
 handle.o json.o powaur.o: handle.h
+hash.o: hash.h
 handle.o powaur.o sync.o: json.h
 query.o powaur.o sync.o: package.h
 json.o query.o: query.h
