@@ -27,6 +27,16 @@ void *xmalloc(size_t sz)
 	return ret;
 }
 
+void *xrealloc(void *data, size_t sz)
+{
+	void *new_data = realloc(data, sz);
+	if (!new_data) {
+		die_errno(PW_ERR_MEMORY);
+	}
+
+	return new_data;
+}
+
 char *xstrdup(const char *str)
 {
 	char *ret = strdup(str);
