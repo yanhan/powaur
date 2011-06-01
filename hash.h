@@ -31,4 +31,7 @@ void *hash_search(struct hash_table *table, void *data);
  * returns index of data if found, returns -1 if not found */
 int hash_pos(struct hash_table *table, void *data);
 
+/* returns an appropriate allocation size */
+unsigned int new_alloc_size(unsigned int old_sz);
+
 #endif

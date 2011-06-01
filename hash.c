@@ -1,23 +1,37 @@
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "hash.h"
 #include "wrapper.h"
 
 /* Adapted from pacman */
-static const size_t prime_list[] =
+static const unsigned int prime_list[] =
 {
-	109ul, 227ul, 467ul, 953ul, 2029ul, 4349ul, 4703ul,
-	10273ul, 22447ul, 45481ul, 92203ul, 202409ul, 410857ul,
-	834181ul, 902483ul, 976369ul, 20000003ul
+	109, 227, 467, 953, 2029, 4349, 4703,
+	10273, 22447, 45481, 92203, 202409, 410857,
+	834181, 902483, 976369, 20000003
 };
 
 static int prime_list_sz = sizeof(prime_list) / sizeof(prime_list[0]);
 
 /* For use in bsearch function */
-static int size_t_cmp(const void *a, const void *b)
+static int uint_cmp(const void *a, const void *b)
 {
-	return *(const size_t *) a - *(const size_t *) b;
+	return *(const unsigned int *) a - *(const unsigned int *) b;
+}
+
+unsigned int new_alloc_size(unsigned int old_size)
+{
+	unsigned int *ptr;
+	unsigned int new_size;
+	ptr = bsearch(&old_size, prime_list, prime_list_sz, sizeof(unsigned int ), uint_cmp);
+
+	if (!ptr || ptr - prime_list + 1 >= prime_list_sz) {
+		new_size = (old_size + 16) * 3/2;
+	} else {
+		new_size = ptr[1];
+	}
+
+	return new_size;
 }
 
 /* Returns pointer to data in hash table if it exists */
@@ -30,7 +44,7 @@ static struct hash_table_entry *hash_lookup(unsigned long hash,
 	while (array[pos].data) {
 		if (array[pos].hash == hash) {
 			if (!htable->cmp(array[pos].data, data)) {
-				return array + pos;
+				break;
 			}
 		}
 
@@ -39,7 +53,7 @@ static struct hash_table_entry *hash_lookup(unsigned long hash,
 		}
 	}
 
-	return NULL;
+	return array + pos;
 }
 
 static void hash_entry_insert(unsigned long hash, struct hash_table *htable, void *data)
@@ -70,18 +84,7 @@ static void hash_entry_insert(unsigned long hash, struct hash_table *htable, voi
 static int hash_grow(struct hash_table *htable)
 {
 	unsigned int new_size;
-	const size_t *ptr;
-
-	ptr = bsearch(&htable->sz, prime_list, prime_list_sz, sizeof(size_t), size_t_cmp);
-
-	if (!ptr || ptr - prime_list + 1 >= prime_list_sz) {
-		/* Exceed size, +1 for now
-		 * TODO: Find better allocation scheme
-		 */
-		new_size = htable->sz + 1;
-	} else {
-		new_size = ptr[1];
-	}
+	new_size = new_alloc_size(htable->sz);
 
 	if (new_size <= htable->sz) {
 		return -1;
@@ -90,7 +93,7 @@ static int hash_grow(struct hash_table *htable)
 	/* Rehash */
 	struct hash_table_entry *new_table = xcalloc(new_size, sizeof(struct hash_table_entry));
 	struct hash_table_entry *old_table = htable->table;
-	int i;
+	unsigned int i;
 	unsigned int old_sz = htable->sz;
 	unsigned long hash;
 
@@ -133,16 +136,6 @@ void hash_free(struct hash_table *htable)
 
 void hash_insert(struct hash_table *htable, void *data)
 {
-	unsigned long hash;
-	unsigned int pos;
-	void *ptr;
-
-	hash = htable->hash(data);
-	ptr = hash_lookup(hash, htable, data);
-	if (ptr) {
-		return;
-	}
-
 	/* Maintain load factor of 1/2 */
 	if (htable->nr >= htable->sz / 2) {
 		if (hash_grow(htable)) {
@@ -150,7 +143,13 @@ void hash_insert(struct hash_table *htable, void *data)
 		}
 	}
 
-	hash_entry_insert(hash, htable, data);
+	unsigned long hash = htable->hash(data);
+	struct hash_table_entry *entry = hash_lookup(hash, htable, data);
+	if (!entry->data) {
+		entry->hash = hash;
+		entry->data = data;
+		htable->nr++;
+	}
 }
 
 void *hash_search(struct hash_table *htable, void *data)
@@ -159,7 +158,7 @@ void *hash_search(struct hash_table *htable, void *data)
 	unsigned long hash = htable->hash(data);
 	
 	entry = hash_lookup(hash, htable, data);
-	return entry? entry->data : NULL;
+	return entry->data ? entry->data : NULL;
 }
 
 int hash_pos(struct hash_table *htable, void *data)
@@ -168,7 +167,7 @@ int hash_pos(struct hash_table *htable, void *data)
 	unsigned long hash = htable->hash(data);
 	entry = hash_lookup(hash, htable, data);
 
-	if (entry) {
+	if (entry->data) {
 		return entry - htable->table;
 	}
 
