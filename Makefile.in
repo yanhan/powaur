@@ -41,6 +41,7 @@ SRC+=curl.c
 SRC+=download.c
 SRC+=environment.c
 SRC+=error.c
+SRC+=graph.c
 SRC+=handle.c
 SRC+=hash.c
 SRC+=json.c
