@@ -5,7 +5,6 @@
 
 /* Opaque */
 struct vertex;
-struct vindex;
 
 /* Forward declaration */
 struct stack;
