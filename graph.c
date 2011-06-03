@@ -24,147 +24,6 @@ struct vertex {
 	} color;
 };
 
-/* vindex_node - node of vindex. See vindex explanations for details */
-struct vindex_node {
-	unsigned long hash;
-	void *data;
-	int idx;
-};
-
-/* vindex - an index to the vertices of the graph. (glorified hash table)
- * Given an unknown data pointer, we want to know if it exists in the graph,
- * and its position if it does.
- *
- * That is the purpose of vindex.
- */
-struct vindex {
-	struct vindex_node *idx;
-	unsigned long (*hash) (void *);
-	int (*cmp) (const void *, const void *);
-	unsigned int nr;
-	unsigned int sz;
-};
-
-static struct vindex *vindex_new(unsigned long (*hash_fn) (void *),
-								 int (*cmp_fn) (const void *, const void *))
-{
-	struct vindex *vindex = xcalloc(1, sizeof(struct vindex));
-	vindex->idx = xcalloc(VINDEX_INIT_SZ, sizeof(struct vindex_node));
-	vindex->hash = hash_fn;
-	vindex->cmp = cmp_fn;
-	vindex->nr = 0;
-	vindex->sz = VINDEX_INIT_SZ;
-	return vindex;
-}
-
-void vindex_free(struct vindex *vindex)
-{
-	if (!vindex) {
-		return;
-	}
-
-	free(vindex->idx);
-	free(vindex);
-}
-
-static void vindex_node_insert(struct vindex *vidx, unsigned long hash,
-							   void *data, int idx)
-{
-	unsigned int pos = hash % vidx->sz;
-	struct vindex_node *table = vidx->idx;
-
-	while (table[pos].data) {
-		if (table[pos].hash == hash && !vidx->cmp(table[pos].data, data)) {
-			return;
-		}
-
-		if (++pos >= vidx->sz) {
-			pos = 0;
-		}
-	}
-
-	table[pos].hash = hash;
-	table[pos].data = data;
-	table[pos].idx = idx;
-	vidx->nr++;
-}
-
-static int vindex_grow(struct vindex *vidx)
-{
-	unsigned int new_size = new_alloc_size(vidx->sz);
-	if (new_size < vidx->sz) {
-		return -1;
-	}
-
-	struct vindex_node *old_idx = vidx->idx;
-	vidx->idx = xcalloc(new_size, sizeof(struct vindex_node));
-
-	unsigned int i;
-	unsigned int old_size = vidx->sz;
-	vidx->sz = new_size;
-	vidx->nr = 0;
-
-	/* Rehash */
-	for (i = 0; i < old_size; ++i) {
-		if (old_idx[i].data) {
-			vindex_node_insert(vidx, old_idx[i].hash, old_idx[i].data, old_idx[i].idx);
-		}
-	}
-
-	free(old_idx);
-	return 0;
-}
-
-static struct vindex_node *vindex_node_lookup(struct vindex *vidx,
-		unsigned long hash, void *data)
-{
-	unsigned int pos = hash % vidx->sz;
-	struct vindex_node *table = vidx->idx;
-
-	while (table[pos].data) {
-		if (table[pos].hash == hash && !vidx->cmp(table[pos].data, data)) {
-			break;
-		}
-
-		if (++pos >= vidx->sz) {
-			pos = 0;
-		}
-	}
-
-	return table + pos;
-}
-
-static void vindex_insert(struct vindex *vidx, void *data, int idx)
-{
-	/* Maintain load factor of 1/2 */
-	if (vidx->nr >= vidx->sz / 2) {
-		vindex_grow(vidx);
-	}
-
-	unsigned long hash = vidx->hash(data);
-	struct vindex_node *node = vindex_node_lookup(vidx, hash, data);
-
-	if (!node->data) {
-		node->hash = hash;
-		node->data = data;
-		node->idx = idx;
-		vidx->nr++;
-	}
-}
-
-/* Used by the graph data structure to find out the index of a vertex */
-static int vindex_lookup(struct graph *graph, void *data)
-{
-	unsigned long hash = graph->vidx->hash(data);
-	struct vindex_node *node = vindex_node_lookup(graph->vidx, hash, data);
-	
-	if (node->data) {
-		return node->idx;
-	}
-
-	return -1;
-}
-
 /* struct vertex functions */
 
 #define VERTEX_ADJ_INIT_SZ 20
@@ -228,6 +87,14 @@ static struct vertex *vertex_get_next_edge(struct graph *graph, struct vertex *v
 	return &(graph->vertices[vertex->adj[vertex->dfs_idx++]]);
 }
 
+/* Used to determine data is located in the graph's adj list
+ * returns data's position in graph's adj list if exists, -1 otherwise.
+ */
+static int vindex_lookup(struct graph *graph, void *data)
+{
+	return hash_pos(graph->vidx, data);
+}
+
 struct graph *graph_new(unsigned long (*hash_fn) (void *),
 						int (*cmp_fn) (const void *, const void *))
 {
@@ -236,7 +103,7 @@ struct graph *graph_new(unsigned long (*hash_fn) (void *),
 	graph->nr = 0;
 	graph->sz = GRAPH_INIT_VERTICES;
 	graph->vertices = xcalloc(GRAPH_INIT_VERTICES, sizeof(struct vertex));
-	graph->vidx = vindex_new(hash_fn, cmp_fn);
+	graph->vidx = hash_new(VINDEX, hash_fn, cmp_fn);
 
 	int i;
 	for (i = 0; i < GRAPH_INIT_VERTICES; ++i) {
@@ -257,7 +124,7 @@ void graph_free(struct graph *graph)
 		vertex_free(&graph->vertices[i]);
 	}
 
-	vindex_free(graph->vidx);
+	hash_free(graph->vidx);
 	free(graph->vertices);
 	free(graph);
 }
@@ -275,26 +142,26 @@ void graph_add_vertex(struct graph *graph, void *data)
 		return;
 	}
 
-	if (graph->nr+1 >= graph->sz) {
+	if (graph->nr >= graph->sz) {
 		graph_grow(graph);
 	}
 
 	vertex_init(&graph->vertices[graph->nr]);
 	graph->vertices[graph->nr].data = data;
-	vindex_insert(graph->vidx, data, graph->nr);
+
+	/* Required for vindex */
+	struct vidx_node node;
+	node.data = data;
+	node.idx = graph->nr;
+	hash_insert(graph->vidx, &node);
 	graph->nr++;
 }
 
 void graph_add_edge(struct graph *graph, void *from, void *to)
 {
 	/* Make sure both from and to actually exist, otherwise add */
-	if (vindex_lookup(graph, from) == -1) {
-		graph_add_vertex(graph, from);
-	}
-
-	if (vindex_lookup(graph, to) == -1) {
-		graph_add_vertex(graph, to);
-	}
+	graph_add_vertex(graph, from);
+	graph_add_vertex(graph, to);
 
 	int from_pos = vindex_lookup(graph, from);
 	int to_pos = vindex_lookup(graph, to);

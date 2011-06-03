@@ -1,6 +1,8 @@
 #ifndef POWAUR_GRAPH_H
 #define POWAUR_GRAPH_H
 
+#include "hash.h"
+
 /* Opaque */
 struct vertex;
 struct vindex;
@@ -13,7 +15,7 @@ struct stack;
  */
 struct graph {
 	struct vertex *vertices;
-	struct vindex *vidx;
+	struct hash_table *vidx;
 	int nr;
 	int sz;
 };

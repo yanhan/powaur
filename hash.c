@@ -60,10 +60,7 @@ struct hash_table_entry {
 		void *data;
 
 		/* vindex */
-		struct {
-			void *data;
-			int idx;
-		} vidx;
+		struct vidx_node vidx;
 	} u;
 };
 
@@ -212,15 +209,15 @@ static int hash_grow_htable(struct hash_table *htable)
 	}
 
 	/* Rehash */
-	struct hash_table_entry *new_table = xcalloc(new_size, sizeof(struct hash_table_entry));
 	struct hash_table_entry *old_table = htable->table;
 	unsigned int i;
 	unsigned int old_sz = htable->sz;
 	unsigned long hash;
 
-	htable->table = new_table;
+	htable->table = xcalloc(new_size, sizeof(struct hash_table_entry));
 	htable->sz = new_size;
 	htable->nr = 0;
+
 	for (i = 0; i < old_sz; ++i) {
 		if (old_table[i].u.data) {
 			hash = htable->hash(old_table[i].u.data);
@@ -288,6 +285,142 @@ int hash_pos_htable(struct hash_table *htable, void *data)
  *
  *****************************************************************************/
 
+/* Forward declaration */
+static void hash_insert_vindex(struct hash_table *htable, void *data);
+static void *hash_search_vindex(struct hash_table *htable, void *data);
+static int hash_pos_vindex(struct hash_table *htable, void *data);
+
+static struct hash_vtbl hash_vtbl_vindex = {
+	/* Share free function */
+	hash_free_htable,
+	hash_insert_vindex,
+	hash_search_vindex,
+	hash_pos_vindex
+};
+
 static void hash_setup_vindex(struct hash_table *htable)
 {
+	htable->vtbl = &hash_vtbl_vindex;
+}
+
+static void hash_entry_insert_vindex(unsigned long hash, struct hash_table *htable,
+									 void *data, int idx)
+{
+	unsigned int pos = hash % htable->sz;
+	struct hash_table_entry *table = htable->table;
+
+	while (table[pos].u.vidx.data) {
+		if (table[pos].hash == hash && !htable->cmp(table[pos].u.vidx.data, data)) {
+			return;
+		}
+
+		if (++pos >= htable->sz) {
+			pos = 0;
+		}
+	}
+
+	table[pos].hash = hash;
+	table[pos].u.vidx.data = data;
+	table[pos].u.vidx.idx = idx;
+	htable->nr++;
+}
+
+/* Returns pointer to data in hash table if it exists */
+static struct hash_table_entry *hash_entry_lookup_vindex(unsigned long hash,
+		struct hash_table *htable, void *data)
+{
+	unsigned int pos = hash % htable->sz;
+	struct hash_table_entry *array = htable->table;
+
+	while (array[pos].u.vidx.data) {
+		if (array[pos].hash == hash) {
+			if (!htable->cmp(array[pos].u.vidx.data, data)) {
+				break;
+			}
+		}
+
+		if (++pos >= htable->sz) {
+			pos = 0;
+		}
+	}
+
+	return array + pos;
+}
+
+/* Grows a hash table based on prime_list
+ * returns 0 on success, -1 on failure.
+ */
+static int hash_grow_vindex(struct hash_table *htable)
+{
+	unsigned int new_size = new_alloc_size(htable->sz);
+	if (new_size <= htable->sz) {
+		return -1;
+	}
+
+	/* Rehash */
+	struct hash_table_entry *old_table = htable->table;
+	unsigned int i;
+	unsigned int old_size = htable->sz;
+	unsigned long hash;
+
+	htable->table = xcalloc(new_size, sizeof(struct hash_table_entry));
+	htable->sz = new_size;
+	htable->nr = 0;
+
+	for (i = 0; i < old_size; ++i) {
+		if (old_table[i].u.vidx.data) {
+			hash_entry_insert_vindex(old_table[i].hash, htable, old_table[i].u.data,
+									 old_table[i].u.vidx.idx);
+		}
+	}
+
+	free(old_table);
+	return 0;
+}
+
+/* @param data a struct vidx_node * */
+void hash_insert_vindex(struct hash_table *htable, void *data)
+{
+	/* Maintain load factor of 1/2 */
+	if (htable->nr >= htable->sz / 2) {
+		if (hash_grow_vindex(htable)) {
+			return;
+		}
+	}
+
+	struct vidx_node *node = data;
+	unsigned long hash = htable->hash(node->data);
+	struct hash_table_entry *entry = hash_entry_lookup_vindex(hash, htable, node->data);
+	if (!entry->u.vidx.data) {
+		entry->hash = hash;
+		entry->u.vidx.data = node->data;
+		entry->u.vidx.idx = node->idx;
+		htable->nr++;
+	}
+}
+
+void *hash_search_vindex(struct hash_table *htable, void *data)
+{
+	struct hash_table_entry *entry;
+	unsigned long hash = htable->hash(data);
+
+	entry = hash_entry_lookup_vindex(hash, htable, data);
+	return entry->u.vidx.data ? entry->u.vidx.data : NULL;
+}
+
+/* This does NOT return where the data is in the hash table.
+ * It returns where the data is in the adjacency list of the graph, which is
+ * given by the idx field in entry->u.vidx
+ */
+int hash_pos_vindex(struct hash_table *htable, void *data)
+{
+	struct hash_table_entry *entry;
+	unsigned long hash = htable->hash(data);
+	entry = hash_entry_lookup_vindex(hash, htable, data);
+
+	if (entry->u.vidx.data) {
+		return entry->u.vidx.idx;
+	}
+
+	return -1;
 }

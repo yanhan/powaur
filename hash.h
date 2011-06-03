@@ -10,6 +10,11 @@ enum hash_type {
 	VINDEX
 };
 
+struct vidx_node {
+	void *data;
+	int idx;
+};
+
 typedef unsigned long (*pw_hash_fn) (void *);
 typedef int (*pw_hashcmp_fn) (const void *, const void *);
 
