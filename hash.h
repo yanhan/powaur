@@ -4,11 +4,17 @@
 /* Opaque */
 struct hash_table;
 
+/* hash table type */
+enum hash_type {
+	HASH_TABLE,
+	VINDEX
+};
+
 typedef unsigned long (*pw_hash_fn) (void *);
 typedef int (*pw_hashcmp_fn) (const void *, const void *);
 
-struct hash_table *hash_new(unsigned long (*hashfn) (void *),
-		int (*hashcmp) (const void *, const void *));
+struct hash_table *hash_new(enum hash_type type, pw_hash_fn hash,
+							pw_hashcmp_fn hashcmp);
 void hash_free(struct hash_table *htable);
 void hash_insert(struct hash_table *table, void *data);
 void *hash_search(struct hash_table *table, void *data);
