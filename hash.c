@@ -3,6 +3,12 @@
 #include "hash.h"
 #include "wrapper.h"
 
+/* Internal use */
+struct hash_table_entry {
+	unsigned long hash;
+	void *data;
+};
+
 /* Adapted from pacman */
 static const unsigned int prime_list[] =
 {

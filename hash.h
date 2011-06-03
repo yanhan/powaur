@@ -5,10 +5,8 @@
  * Slightly modified from Git
  */
 
-struct hash_table_entry {
-	unsigned long hash;
-	void *data;
-};
+/* Opaque */
+struct hash_table_entry;
 
 typedef unsigned long (*pw_hash_fn) (void *);
 typedef int (*pw_hashcmp_fn) (const void *, const void *);
