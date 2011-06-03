@@ -3,12 +3,6 @@
 #include "hash.h"
 #include "wrapper.h"
 
-/* Internal use */
-struct hash_table_entry {
-	unsigned long hash;
-	void *data;
-};
-
 /* Adapted from pacman */
 static const unsigned int prime_list[] =
 {
@@ -39,6 +33,25 @@ unsigned int new_alloc_size(unsigned int old_size)
 
 	return new_size;
 }
+
+/*******************************************************************************
+ *
+ * Internal use only
+ *
+ ******************************************************************************/
+
+struct hash_table_entry {
+	unsigned long hash;
+	void *data;
+};
+
+struct hash_table {
+	struct hash_table_entry *table;
+	unsigned long (*hash) (void *);
+	int (*cmp) (const void *, const void *);
+	unsigned int sz;
+	unsigned int nr;
+};
 
 /* Returns pointer to data in hash table if it exists */
 static struct hash_table_entry *hash_lookup(unsigned long hash,
