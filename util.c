@@ -228,6 +228,27 @@ char *strtrim(char *line)
 	return line;
 }
 
+char *strtrim_ver(char *line)
+{
+	char *ptr;
+	ptr = strchr(line, '<');
+	if (ptr) {
+		*ptr = 0;
+	}
+
+	ptr = strchr(line, '>');
+	if (ptr) {
+		*ptr = 0;
+	}
+
+	ptr = strchr(line, '=');
+	if (ptr) {
+		*ptr = 0;
+	}
+
+	return strtrim(line);
+}
+
 /* From pacman */
 int getcols(void)
 {

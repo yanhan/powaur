@@ -33,6 +33,12 @@ void color_print_restore(void);
 int extract_file(const char *filename);
 int getcols(void);
 char *strtrim(char *line);
+/* Trims version from a string. ie, if you pass it "pacman>=3.5",
+ * the string will become "pacman".
+ *
+ * @param line modifiable string
+ */
+char *strtrim_ver(char *line);
 int wait_or_whine(pid_t pid, char *argv0);
 
 /* Prints c for rep times */
