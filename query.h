@@ -11,5 +11,6 @@ enum aurquery_t {
 };
 
 int powaur_query(alpm_list_t *targets);
+int powaur_crawl(alpm_list_t *targets);
 
 #endif

@@ -11,6 +11,8 @@
 #include "download.h"
 #include "environment.h"
 #include "error.h"
+#include "graph.h"
+#include "hash.h"
 #include "json.h"
 #include "package.h"
 #include "powaur.h"
@@ -516,16 +518,83 @@ cleanup:
 	return found ? 0 : -1;
 }
 
-/* TODO: Finish dependency resolution
+/* TODO: Build dependency graph for ALL targets instead of 1 by 1
  * -Su, experimental feature
  * @param targets list of struct aurpkg_t *
  */
 static int upgrade_pkgs(alpm_list_t *targets)
 {
-	alpm_list_t *i;
+	alpm_list_t *i, *k;
+	alpm_list_t *deps, *free_list = NULL;
+	alpm_list_t *resolve;
+	struct aurpkg_t *pkg;
+	struct graph *graph;
+	struct stack *st;
+	char *pkgname;
+
+	st = stack_new(sizeof(char *));
 	for (i = targets; i; i = i->next) {
+		pkg = i->data;
+		graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+
+		stack_reset(st);
+		stack_push(st, &pkg->name);
+		while (!stack_empty(st)) {
+			stack_pop(st, &pkgname);
+			if (!pkgname) {
+				printf("NULL package detected!\n");
+				continue;
+			} else {
+				printf("Now at package %s\n", pkgname);
+			}
+
+			resolve = NULL;
+			resolve = alpm_list_add(resolve, pkgname);
+			deps = resolve_dependencies(resolve);
+
+			for (k = deps; k; k = k->next) {
+				/* add dep -> pkgname edge */
+				graph_add_edge(graph, k->data, pkgname);
+				stack_push(st, &k->data);
+			}
+
+			free_list = alpm_list_add(free_list, deps);
+			alpm_list_free(resolve);
+		}
+
+		/* Print topological order */
+		struct stack *topost = stack_new(sizeof(int));
+		int cycles = graph_toposort(graph, topost);
+		int t;
+		int cnt = 0;
+		if (cycles) {
+			printf("Cyclic dependencies for %s\n", i->data);
+		} else {
+			while (!stack_empty(topost)) {
+				stack_pop(topost, &t);
+				pkgname = graph_get_vertex_data(graph, t);
+				if (!pkgname) {
+					continue;
+				}
+
+				if (stack_empty(topost)) {
+					printf("%s", pkgname);
+				} else {
+					printf("%s -> ", pkgname);
+				}
+			}
+		}
+
+		stack_free(topost);
+		graph_free(graph);
 	}
 
+	for (i = free_list; i; i = i->next) {
+		FREELIST(i->data);
+	}
+
+	alpm_list_free(free_list);
+	stack_free(st);
 	return 0;
 }
 
@@ -619,8 +688,8 @@ static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 
 	outdated_pkgs = get_outdated_pkgs(curl, targets);
 
-	/* --check, don't upgrade */
-	if (config->op_s_check) {
+	if (!outdated_pkgs) {
+		pw_printf(PW_LOG_INFO, "No AUR packages are outdated.\n");
 		goto cleanup;
 	}
 
@@ -629,10 +698,15 @@ static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 	print_aurpkg_list(outdated_pkgs);
 	printf("\n");
 
+	/* --check, don't upgrade */
+	if (config->op_s_check) {
+		goto cleanup;
+	}
+
 	upgrade_all = yesno("Do you wish to upgrade the above packages?");
 	if (upgrade_all) {
 		/* Experimental */
-		/* ret = upgrade_pkgs(outdated_pkgs); */
+		ret = upgrade_pkgs(outdated_pkgs);
 	}
 
 cleanup:

@@ -8,7 +8,8 @@ enum {
 	PW_OP_QUERY,
 	PW_OP_GET,
 	PW_OP_MAINTAINER,
-	PW_OP_BACKUP
+	PW_OP_BACKUP,
+	PW_OP_CRAWL
 };
 
 enum {
@@ -20,7 +21,6 @@ enum {
 	OPT_MAXTHREADS,
 	OPT_COLOR,
 	OPT_NOCOLOR,
-	OPT_CHECK_AUR
 };
 
 enum pwloglevel_t {

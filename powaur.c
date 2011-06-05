@@ -69,6 +69,7 @@ static void usage(unsigned short op)
 		printf("%s %s <operation> [...]\n", USAGE, MYNAME);
 		printf("%s%s {-h --help}\n", TAB, MYNAME);
 		printf("%s%s {-G --getpkgbuild} <%s>\n", TAB, MYNAME, PKG);
+		printf("%s%s --crawl <%s>\n", TAB, MYNAME, PKG);
 		printf("%s%s {-S --sync}        [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
 		printf("%s%s {-Q --query}       [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
 		printf("%s%s {-M --maintainer}  <%s>\n", TAB, MYNAME, PKG);
@@ -103,6 +104,9 @@ static void usage(unsigned short op)
 			break;
 		case PW_OP_MAINTAINER:
 			printf("      --vote                 order search results by votes\n");
+			break;
+		case PW_OP_CRAWL:
+			printf("      --crawl <%s>    outputs dependency graph for %s\n", PKG, PKG);
 			break;
 		default:
 			break;
@@ -153,6 +157,10 @@ static int parsearg_op(int option, int dry_run)
 		if (dry_run) break;
 		config->op = (config->op == PW_OP_MAIN ? PW_OP_BACKUP : PW_OP_INVAL);
 		break;
+	case PW_OP_CRAWL:
+		if (dry_run) break;
+		config->op = (config->op == PW_OP_MAIN ? PW_OP_CRAWL : PW_OP_INVAL);
+		break;
 	case 'h':
 		if (dry_run) break;
 		config->help = 1;
@@ -180,9 +188,6 @@ static int parsearg_sync(int option)
 		break;
 	case 'u':
 		config->op_s_upgrade = 1;
-		break;
-	case OPT_CHECK_AUR:
-		config->op_s_check = 1;
 		break;
 	default:
 		return -1;
@@ -282,7 +287,7 @@ static int parseargs(int argc, char *argv[])
 		{"search", no_argument, NULL, 's'},
 		{"upgrade", no_argument, NULL, 'u'},
 		{"color", no_argument, NULL, OPT_COLOR},
-		{"check", no_argument, NULL, OPT_CHECK_AUR},
+		{"crawl", no_argument, NULL, PW_OP_CRAWL},
 		{"debug", no_argument, NULL, OPT_DEBUG},
 		{"nocolor", no_argument, NULL, OPT_NOCOLOR},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},
@@ -411,6 +416,9 @@ int main(int argc, char *argv[])
 		break;
 	case PW_OP_BACKUP:
 		ret = powaur_backup(powaur_targets);
+		break;
+	case PW_OP_CRAWL:
+		ret = powaur_crawl(powaur_targets);
 		break;
 	default:
 		break;
