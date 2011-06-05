@@ -187,12 +187,12 @@ static void *provides_search(void *htable, void *val)
 }
 
 /* @param hash hash table of struct pkgpair * with pmpkg_t * as pkg field
- * @param provides hashmap of provided packages
+ * @param provides hashbst of provided packages
  * @param pkgname package name
  * @param verbose switch on detailed dependency resolution
  */
-static alpm_list_t *crawl_resolve(struct hash_table *hash, struct hashmap *local_provides,
-								  struct hashmap *sync_provides, struct pkgpair *curpkg,
+static alpm_list_t *crawl_resolve(struct hash_table *hash, struct hashbst *local_provides,
+								  struct hashbst *sync_provides, struct pkgpair *curpkg,
 								  int verbose)
 {
 	alpm_list_t *i, *depmod_list, *deps = NULL;
@@ -217,13 +217,13 @@ static alpm_list_t *crawl_resolve(struct hash_table *hash, struct hashmap *local
 
 search_provides:
 	/* Search local provides */
-	pkgpair = hashmap_tree_search(local_provides, (void *) curpkg->pkgname, hash, provides_search);
+	pkgpair = hashbst_tree_search(local_provides, (void *) curpkg->pkgname, hash, provides_search);
 	if (pkgpair) {
 		return alpm_list_add(NULL, (void *) pkgpair->pkgname);
 	}
 
 	/* Search sync provides */
-	pkgpair = hashmap_tree_search(local_provides, (void *) curpkg->pkgname, hash, provides_search);
+	pkgpair = hashbst_tree_search(local_provides, (void *) curpkg->pkgname, hash, provides_search);
 
 	if (pkgpair) {
 		return alpm_list_add(NULL, (void *) pkgpair->pkgname);
@@ -233,8 +233,8 @@ search_provides:
 	return NULL;
 }
 
-static void crawl_deps(struct hash_table *hash, struct hashmap *local_provides,
-					   struct hashmap *sync_provides, const char *pkgname)
+static void crawl_deps(struct hash_table *hash, struct hashbst *local_provides,
+					   struct hashbst *sync_provides, const char *pkgname)
 {
 	struct graph *graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 	struct stack *st = stack_new(sizeof(struct pkgpair));
@@ -325,12 +325,12 @@ void provides_walk(void *key, void *val)
 /* hashes packages and their provides
  * @param dbcache list of pmpkg_t * to be hashed
  * @param htable hash table hashing struct pkgpair
- * @param provides hashmap used to hash provides
+ * @param provides hashbst used to hash provides
  * @param strpool memlist of dynamically allocated strings
  * @param pkgpool memlist of struct pkgpair
  */
 static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
-						  struct hashmap *provides, struct memlist *strpool,
+						  struct hashbst *provides, struct memlist *strpool,
 						  struct memlist *pkgpool)
 {
 	alpm_list_t *i, *k;
@@ -360,7 +360,7 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 
 			dupstr = xstrdup(buf);
 			memlist_ptr = memlist_add(strpool, &dupstr);
-			hashmap_insert(provides, memlist_ptr, (void *) pkgname);
+			hashbst_insert(provides, memlist_ptr, (void *) pkgname);
 		}
 	}
 }
@@ -381,8 +381,8 @@ int powaur_crawl(alpm_list_t *targets)
 	struct memlist *pkgstore = memlist_new(4096, sizeof(struct pkgpair), 0);
 
 	struct hash_table *hash = hash_new(HASH_TABLE, pkg_sdbm, pkg_cmp);
-	struct hashmap *local_provides = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-	struct hashmap *sync_provides = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	struct hashbst *local_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	struct hashbst *sync_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 
 	db = alpm_option_get_localdb();
 	ASSERT(db != NULL, return error(PW_ERR_LOCALDB_NULL));
@@ -405,8 +405,8 @@ int powaur_crawl(alpm_list_t *targets)
 
 	memlist_free(depstrs);
 	memlist_free(pkgstore);
-	hashmap_free(local_provides);
-	hashmap_free(sync_provides);
+	hashbst_free(local_provides);
+	hashbst_free(sync_provides);
 	hash_free(hash);
 	return 0;
 }

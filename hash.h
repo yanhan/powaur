@@ -37,26 +37,26 @@ unsigned int new_alloc_size(unsigned int old_sz);
 
 
 /* Associative array, maps key to a tree of values */
-struct hashmap;
+struct hashbst;
 
 /* tree_search function prototype
  * @param search external search structure
  * @param val value to search for
  */
-typedef void *(*hmap_tree_search_fn) (void *search, void *val);
+typedef void *(*hbst_search_fn) (void *search, void *val);
 
-struct hashmap *hashmap_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp);
-void hashmap_free(struct hashmap *hmap);
-void hashmap_insert(struct hashmap *hmap, void *key, void *val);
+struct hashbst *hashbst_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp);
+void hashbst_free(struct hashbst *hbst);
+void hashbst_insert(struct hashbst *hbst, void *key, void *val);
 
 /* Search for a key in search structure search fulfilling criteria given by fn
- * @param hmap hash map
- * @param key key to search for in hash map
+ * @param hbst hash bst
+ * @param key key to search for in hash bst
  * @param search external search structure
  * @param fn function to use in search walking
  */
-void *hashmap_tree_search(struct hashmap *hmap, void *key, void *search, hmap_tree_search_fn fn);
+void *hashbst_tree_search(struct hashbst *hbst, void *key, void *search, hbst_search_fn fn);
 
-void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val));
+void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val));
 
 #endif

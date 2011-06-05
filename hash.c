@@ -41,16 +41,16 @@ unsigned int new_alloc_size(unsigned int old_size)
  ******************************************************************************/
 
 /* BST node */
-struct hashmap_bst_node {
+struct hashbst_tree_node {
 	void *val;
-	struct hashmap_bst_node *left;
-	struct hashmap_bst_node *right;
+	struct hashbst_tree_node *left;
+	struct hashbst_tree_node *right;
 };
 
 /* Simple BST */
-struct hashmap_bst {
+struct hashbst_tree {
 	void *key;
-	struct hashmap_bst_node *root;
+	struct hashbst_tree_node *root;
 };
 
 struct hash_table_entry {
@@ -64,7 +64,7 @@ struct hash_table_entry {
 		struct vidx_node vidx;
 
 		/* hash bst */
-		struct hashmap_bst tree;
+		struct hashbst_tree tree;
 	} u;
 };
 
@@ -450,27 +450,27 @@ int hash_pos_vindex(struct hash_table *htable, void *data)
  *
  ******************************************************************************/
 
-static void hashmap_bst_node_free(struct hashmap_bst_node *node)
+static void hashbst_tree_node_free(struct hashbst_tree_node *node)
 {
 	if (!node) {
 		return;
 	}
 
 	/* Recursion */
-	hashmap_bst_node_free(node->left);
-	hashmap_bst_node_free(node->right);
+	hashbst_tree_node_free(node->left);
+	hashbst_tree_node_free(node->right);
 	free(node);
 }
 
 /* Recursion */
-static void *hashmap_bst_node_search(struct hashmap_bst_node *node, void *search, hmap_tree_search_fn fn)
+static void *hashbst_tree_node_search(struct hashbst_tree_node *node, void *search, hbst_search_fn fn)
 {
 	if (!node) {
 		return NULL;
 	}
 
 	void *ret;
-	ret = hashmap_bst_node_search(node->left, search, fn);
+	ret = hashbst_tree_node_search(node->left, search, fn);
 	if (ret) {
 		return ret;
 	}
@@ -480,20 +480,20 @@ static void *hashmap_bst_node_search(struct hashmap_bst_node *node, void *search
 		return ret;
 	}
 
-	return hashmap_bst_node_search(node->right, search, fn);
+	return hashbst_tree_node_search(node->right, search, fn);
 }
 
 /* Inserts a value into the bst, based on cmp */
-static void hashmap_bst_insert(struct hashmap_bst *bst, void *data, pw_hashcmp_fn cmp)
+static void hashbst_bst_insert(struct hashbst_tree *bst, void *data, pw_hashcmp_fn cmp)
 {
 	if (!bst->root) {
-		bst->root = xcalloc(1, sizeof(struct hashmap_bst_node));
+		bst->root = xcalloc(1, sizeof(struct hashbst_tree_node));
 		bst->root->val = data;
 		return;
 	}
 
 	int res, is_left_child = 1;
-	struct hashmap_bst_node *parent, *cur;
+	struct hashbst_tree_node *parent, *cur;
 	cur = bst->root;
 
 	while (cur) {
@@ -513,91 +513,91 @@ static void hashmap_bst_insert(struct hashmap_bst *bst, void *data, pw_hashcmp_f
 	}
 
 	if (is_left_child) {
-		parent->left = xcalloc(1, sizeof(struct hashmap_bst_node));
+		parent->left = xcalloc(1, sizeof(struct hashbst_tree_node));
 		parent->left->val = data;
 	} else {
-		parent->right = xcalloc(1, sizeof(struct hashmap_bst_node));
+		parent->right = xcalloc(1, sizeof(struct hashbst_tree_node));
 		parent->right->val = data;
 	}
 }
 
 /* Frees an entire tree */
-static void hashmap_bst_free(struct hashmap_bst *bst)
+static void hashbst_bst_free(struct hashbst_tree *bst)
 {
-	hashmap_bst_node_free(bst->root);
+	hashbst_tree_node_free(bst->root);
 }
 
 /* TODO: Remove */
-static void hashmap_bst_node_walk(struct hashmap_bst_node *node, void *key, void (*walk) (void *key, void *val))
+static void hashbst_tree_node_walk(struct hashbst_tree_node *node, void *key, void (*walk) (void *key, void *val))
 {
 	if (!node) {
 		return;
 	}
 
 	/* Recursion */
-	hashmap_bst_node_walk(node->left, key, walk);
+	hashbst_tree_node_walk(node->left, key, walk);
 	walk(key, node->val);
-	hashmap_bst_node_walk(node->right, key, walk);
+	hashbst_tree_node_walk(node->right, key, walk);
 }
 
 /* TODO: Remove */
-static void hashmap_bst_walk(struct hashmap_bst *bst, void (*walk) (void *key, void *val))
+static void hashbst_bst_walk(struct hashbst_tree *bst, void (*walk) (void *key, void *val))
 {
-	hashmap_bst_node_walk(bst->root, bst->key, walk);
+	hashbst_tree_node_walk(bst->root, bst->key, walk);
 }
 
 /*******************************************************************************
  *
- * Hash Map - Wrapper over Hash BST
+ * Hash BST - Wrapper over HASH_BST hash tables
  *
  ******************************************************************************/
 
-struct hashmap {
+struct hashbst {
 	struct hash_table *htable;
 };
 
 /* Use this to insert into the underlying hash table */
-struct hashmap_pair {
+struct hashbst_pair {
 	void *key;
 	void *val;
 };
 
-struct hashmap *hashmap_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp)
+struct hashbst *hashbst_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp)
 {
-	struct hashmap *hmap = xcalloc(1, sizeof(struct hashmap));
-	hmap->htable = hash_new(HASH_BST, hashfn, hashcmp);
-	return hmap;
+	struct hashbst *hbst = xcalloc(1, sizeof(struct hashbst));
+	hbst->htable = hash_new(HASH_BST, hashfn, hashcmp);
+	return hbst;
 }
 
-void hashmap_free(struct hashmap *hmap)
+void hashbst_free(struct hashbst *hbst)
 {
-	hash_free(hmap->htable);
-	free(hmap);
+	hash_free(hbst->htable);
+	free(hbst);
 }
 
-void hashmap_insert(struct hashmap *hmap, void *key, void *val)
+void hashbst_insert(struct hashbst *hbst, void *key, void *val)
 {
-	struct hashmap_pair hpair = {
+	struct hashbst_pair hpair = {
 		key, val
 	};
 
-	hash_insert(hmap->htable, &hpair);
+	hash_insert(hbst->htable, &hpair);
 }
 
-void *hashmap_tree_search(struct hashmap *hmap, void *key, void *search, hmap_tree_search_fn fn)
+void *hashbst_tree_search(struct hashbst *hbst, void *key, void *search, hbst_search_fn fn)
 {
 	/* Find entry with the key */
-	struct hashmap_bst *bst = hash_search(hmap->htable, key);
+	struct hashbst_tree *bst = hash_search(hbst->htable, key);
 	if (!bst) {
 		return NULL;
 	}
 
-	return hashmap_bst_node_search(bst->root, search, fn);
+	return hashbst_tree_node_search(bst->root, search, fn);
 }
 
 /*******************************************************************************
  *
- * Hash BST - Only to be used by Hash Map
+ * HASH_BST - Only to be used by hashbst
  *
  ******************************************************************************/
 
@@ -642,7 +642,7 @@ static struct hash_table_entry *hash_entry_lookup_bst(unsigned long hash,
 
 /* Transfers the entire bst to its destination in htable */
 static void hash_entry_graft_tree(unsigned long hash, struct hash_table *htable,
-								  struct hashmap_bst *bst)
+								  struct hashbst_tree *bst)
 {
 	unsigned int pos = hash % htable->sz;
 	struct hash_table_entry *array = htable->table;
@@ -708,7 +708,7 @@ static void hash_free_bst(struct hash_table *htable)
 	struct hash_table_entry *array = htable->table;
 	for (i = 0; i < htable->sz; ++i) {
 		if (array[i].u.tree.root) {
-			hashmap_bst_free(&array[i].u.tree);
+			hashbst_bst_free(&array[i].u.tree);
 		}
 	}
 
@@ -726,7 +726,7 @@ void hash_insert_bst(struct hash_table *htable, void *data)
 	}
 
 	/* Required casting for HASH_BST type */
-	struct hashmap_pair *hpair = data;
+	struct hashbst_pair *hpair = data;
 	unsigned long hash = htable->hash(hpair->key);
 	struct hash_table_entry *entry = hash_entry_lookup_bst(hash, htable, hpair->key);
 
@@ -737,10 +737,10 @@ void hash_insert_bst(struct hash_table *htable, void *data)
 		htable->nr++;
 	}
 
-	hashmap_bst_insert(&entry->u.tree, hpair->val, htable->cmp);
+	hashbst_bst_insert(&entry->u.tree, hpair->val, htable->cmp);
 }
 
-/* Internal use only, returns the entire hashmap_bst for the key (data)
+/* Internal use only, returns the entire hashbst_tree for the key (data)
  * @param htable hash table
  * @param data key to search for
  */
@@ -776,14 +776,14 @@ void hash_walk(struct hash_table *htable, void (*walk) (void *data))
 }
 
 /* TODO: Remove */
-void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val))
+void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val))
 {
 	unsigned int i;
-	struct hash_table_entry *array = hmap->htable->table;
-	for (i = 0; i < hmap->htable->sz; ++i) {
+	struct hash_table_entry *array = hbst->htable->table;
+	for (i = 0; i < hbst->htable->sz; ++i) {
 		if (array[i].u.tree.root) {
 			printf("pos %u:\n", i);
-			hashmap_bst_walk(&array[i].u.tree, walk);
+			hashbst_bst_walk(&array[i].u.tree, walk);
 		}
 	}
 }
