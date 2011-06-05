@@ -11,16 +11,25 @@ enum hash_type {
 	HASH_BST
 };
 
+/* Exposed for graph data structure */
 struct vidx_node {
 	void *data;
 	int idx;
 };
 
+/* returns an appropriate allocation size */
+unsigned int new_alloc_size(unsigned int old_sz);
+
+/*******************************************************************************
+ *
+ * General hash table functions
+ *
+ ******************************************************************************/
+
 typedef unsigned long (*pw_hash_fn) (void *);
 typedef int (*pw_hashcmp_fn) (const void *, const void *);
 
-struct hash_table *hash_new(enum hash_type type, pw_hash_fn hash,
-							pw_hashcmp_fn hashcmp);
+struct hash_table *hash_new(enum hash_type type, pw_hash_fn hash, pw_hashcmp_fn hashcmp);
 void hash_free(struct hash_table *htable);
 void hash_insert(struct hash_table *table, void *data);
 void *hash_search(struct hash_table *table, void *data);
@@ -32,9 +41,11 @@ int hash_pos(struct hash_table *table, void *data);
 /* Walks through the hash table */
 void hash_walk(struct hash_table *table, void (*walk) (void *data));
 
-/* returns an appropriate allocation size */
-unsigned int new_alloc_size(unsigned int old_sz);
-
+/*******************************************************************************
+ *
+ * Hash BST functions
+ *
+ ******************************************************************************/
 
 /* Associative array, maps key to a tree of values */
 struct hashbst;
@@ -56,7 +67,6 @@ void hashbst_insert(struct hashbst *hbst, void *key, void *val);
  * @param fn function to use in search walking
  */
 void *hashbst_tree_search(struct hashbst *hbst, void *key, void *search, hbst_search_fn fn);
-
 void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val));
 
 #endif
