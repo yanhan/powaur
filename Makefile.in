@@ -45,6 +45,7 @@ SRC+=graph.c
 SRC+=handle.c
 SRC+=hash.c
 SRC+=json.c
+SRC+=memlist.c
 SRC+=package.c
 SRC+=powaur.c
 SRC+=query.c
@@ -85,6 +86,7 @@ download.o powaur.o sync.o: download.h
 handle.o json.o powaur.o: handle.h
 hash.o sync.o: hash.h
 handle.o powaur.o sync.o: json.h
+powaur.o: memlist.h
 query.o powaur.o sync.o: package.h
 json.o query.o: query.h
 powaur.o sync.o: sync.h
