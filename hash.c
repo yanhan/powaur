@@ -53,6 +53,12 @@ struct hashbst_tree {
 	struct hashbst_tree_node *root;
 };
 
+/* hashmap pair */
+struct hashmap_pair {
+	void *key;
+	void *val;
+};
+
 struct hash_table_entry {
 	unsigned long hash;
 
@@ -65,6 +71,9 @@ struct hash_table_entry {
 
 		/* hash bst */
 		struct hashbst_tree tree;
+
+		/* hash map */
+		struct hashmap_pair pair;
 	} u;
 };
 
@@ -100,6 +109,7 @@ struct hash_vtbl {
 static void hash_setup_htable(struct hash_table *htable);
 static void hash_setup_vindex(struct hash_table *htable);
 static void hash_setup_bst(struct hash_table *htable);
+static void hash_setup_hmap(struct hash_table *htable);
 
 struct hash_table *hash_new(enum hash_type type, pw_hash_fn hashfn,
 							pw_hashcmp_fn hashcmp)
@@ -118,6 +128,9 @@ struct hash_table *hash_new(enum hash_type type, pw_hash_fn hashfn,
 		break;
 	case HASH_BST:
 		hash_setup_bst(htable);
+		break;
+	case HASH_MAP:
+		hash_setup_hmap(htable);
 		break;
 	default:
 		/* Default to HASH_TABLE */
@@ -311,7 +324,7 @@ static void *hash_search_vindex(struct hash_table *htable, void *data);
 static int hash_pos_vindex(struct hash_table *htable, void *data);
 
 static struct hash_vtbl hash_vtbl_vindex = {
-	/* Share free function */
+	/* NOTE: Sharing function with htable */
 	hash_free_htable,
 	hash_insert_vindex,
 	hash_search_vindex,
@@ -784,6 +797,203 @@ void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val))
 		if (array[i].u.tree.root) {
 			printf("pos %u:\n", i);
 			hashbst_bst_walk(&array[i].u.tree, walk);
+		}
+	}
+}
+
+/*******************************************************************************
+ *
+ * HASH_MAP
+ *
+ ******************************************************************************/
+
+/* hashmap - key-value pair data store */
+struct hashmap {
+	struct hash_table *htable;
+};
+
+/* Forward declarations */
+static void hash_insert_hmap(struct hash_table *htable, void *data);
+static void *hash_search_hmap(struct hash_table *htable, void *data);
+static int hash_pos_hmap(struct hash_table *htable, void *data);
+
+static struct hash_vtbl hash_vtbl_hmap = {
+	/* NOTE: Sharing function with htable */
+	hash_free_htable,
+	hash_insert_hmap,
+	hash_search_hmap,
+	hash_pos_hmap
+};
+
+static void hash_setup_hmap(struct hash_table *htable)
+{
+	htable->vtbl = &hash_vtbl_hmap;
+}
+
+static void hash_entry_insert_hmap(unsigned long hash, struct hash_table *htable,
+								   void *key, void *val)
+{
+	unsigned int pos = hash % htable->sz;
+	struct hash_table_entry *array = htable->table;
+
+	while (array[pos].u.pair.key) {
+		if (array[pos].hash == hash) {
+			if (!htable->cmp(array[pos].u.pair.key, key)) {
+				return;
+			}
+		}
+
+		if (++pos >= htable->sz) {
+			pos = 0;
+		}
+	}
+
+	array[pos].hash = hash;
+	array[pos].u.pair.key = key;
+	array[pos].u.pair.val = val;
+	htable->nr++;
+}
+
+static struct hash_table_entry *hash_entry_lookup_hmap(unsigned long hash,
+											struct hash_table *htable, void *key)
+{
+	unsigned int pos = hash % htable->sz;
+	struct hash_table_entry *array = htable->table;
+
+	while (array[pos].u.pair.key) {
+		if (array[pos].hash == hash) {
+			if (!htable->cmp(array[pos].u.pair.key, key)) {
+				break;
+			}
+		}
+
+		if (++pos >= htable->sz) {
+			pos = 0;
+		}
+	}
+
+	return array + pos;
+}
+
+/* Grows a hash table based on prime_list
+ * returns 0 on success, -1 on failure.
+ */
+static int hash_grow_hmap(struct hash_table *htable)
+{
+	unsigned int new_size;
+	new_size = new_alloc_size(htable->sz);
+
+	if (new_size <= htable->sz) {
+		return -1;
+	}
+
+	/* Rehash */
+	struct hash_table_entry *old_table = htable->table;
+	unsigned int i;
+	unsigned int old_sz = htable->sz;
+	unsigned long hash;
+
+	htable->table = xcalloc(new_size, sizeof(struct hash_table_entry));
+	htable->sz = new_size;
+	htable->nr = 0;
+
+	for (i = 0; i < old_sz; ++i) {
+		if (old_table[i].u.pair.key) {
+			hash = htable->hash(old_table[i].u.pair.key);
+			hash_entry_insert_hmap(hash, htable, old_table[i].u.pair.key,
+								   old_table[i].u.pair.val);
+		}
+	}
+
+	free(old_table);
+	return 0;
+}
+
+void hash_insert_hmap(struct hash_table *htable, void *map_pair)
+{
+	/* Maintain load factor of 1/2 */
+	if (htable->nr >= htable->sz / 2) {
+		if (hash_grow_hmap(htable)) {
+			return;
+		}
+	}
+
+	struct hashmap_pair *pair = map_pair;
+	unsigned long hash = htable->hash(pair->key);
+	struct hash_table_entry *entry = hash_entry_lookup_hmap(hash, htable, pair->key);
+	if (!entry->u.pair.key) {
+		entry->hash = hash;
+		entry->u.pair.key = pair->key;
+		entry->u.pair.val = pair->val;
+		htable->nr++;
+	}
+}
+
+void *hash_search_hmap(struct hash_table *htable, void *key)
+{
+	struct hash_table_entry *entry;
+	unsigned long hash = htable->hash(key);
+
+	entry = hash_entry_lookup_hmap(hash, htable, key);
+	return entry->u.pair.val ? entry->u.pair.val : NULL;
+}
+
+int hash_pos_hmap(struct hash_table *htable, void *key)
+{
+	struct hash_table_entry *entry;
+	unsigned long hash = htable->hash(key);
+	entry = hash_entry_lookup_hmap(hash, htable, key);
+
+	if (entry->u.pair.key) {
+		return entry - htable->table;
+	}
+
+	return -1;
+}
+
+/*******************************************************************************
+ *
+ * Hash Map - Wrapper over HASH_MAP
+ *
+ ******************************************************************************/
+
+struct hashmap *hashmap_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp)
+{
+	struct hashmap *hmap = xcalloc(1, sizeof(struct hashmap));
+	hmap->htable = hash_new(HASH_MAP, hashfn, hashcmp);
+	return hmap;
+}
+
+void hashmap_free(struct hashmap *hmap)
+{
+	hash_free(hmap->htable);
+	free(hmap);
+}
+
+void hashmap_insert(struct hashmap *hmap, void *key, void *val)
+{
+	struct hashmap_pair pair = {
+		key, val
+	};
+
+	hash_insert_hmap(hmap->htable, &pair);
+}
+
+void *hashmap_search(struct hashmap *hmap, void *key)
+{
+	struct hash_table_entry *entry = hash_search(hmap->htable, key);
+	return entry->u.pair.val ? entry->u.pair.val : NULL;
+}
+
+void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val))
+{
+	struct hash_table_entry *array = hmap->htable->table;
+	unsigned int i;
+
+	for (i = 0; i < hmap->htable->sz; ++i) {
+		if (array[i].u.pair.key) {
+			printf("pos %u: ", i);
+			walk(array[i].u.pair.key, array[i].u.pair.val);
 		}
 	}
 }

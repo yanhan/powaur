@@ -8,7 +8,8 @@ struct hash_table;
 enum hash_type {
 	HASH_TABLE,
 	VINDEX,
-	HASH_BST
+	HASH_BST,
+	HASH_MAP
 };
 
 /* Exposed for graph data structure */
@@ -68,5 +69,26 @@ void hashbst_insert(struct hashbst *hbst, void *key, void *val);
  */
 void *hashbst_tree_search(struct hashbst *hbst, void *key, void *search, hbst_search_fn fn);
 void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val));
+
+/*******************************************************************************
+ *
+ * Hash Map functions
+ *
+ ******************************************************************************/
+
+/* Opaque */
+struct hashmap;
+
+struct hashmap *hashmap_new(pw_hash_fn hashfn, pw_hashcmp_fn hashcmp);
+void hashmap_free(struct hashmap *hmap);
+void hashmap_insert(struct hashmap *hmap, void *key, void *val);
+
+/* Searches hashmap for a given key
+ * returns the value corresponding to key if it's in hashmap, NULL otherwise.
+ * @param hmap hash map
+ * @param key key to search for
+ */
+void *hashmap_search(struct hashmap *hmap, void *key);
+void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val));
 
 #endif
