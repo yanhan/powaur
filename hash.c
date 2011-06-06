@@ -976,13 +976,12 @@ void hashmap_insert(struct hashmap *hmap, void *key, void *val)
 		key, val
 	};
 
-	hash_insert_hmap(hmap->htable, &pair);
+	hash_insert(hmap->htable, &pair);
 }
 
 void *hashmap_search(struct hashmap *hmap, void *key)
 {
-	struct hash_table_entry *entry = hash_search(hmap->htable, key);
-	return entry->u.pair.val ? entry->u.pair.val : NULL;
+	return hash_search(hmap->htable, key);
 }
 
 void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val))
