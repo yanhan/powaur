@@ -274,7 +274,8 @@ search_provides:
 	return 0;
 }
 
-static void crawl_deps(struct pw_hashdb *hashdb, const char *pkgname)
+struct graph *build_dep_graph(struct pw_hashdb *hashdb, const char *pkgname,
+							  struct stack *topost, int *cycles)
 {
 	struct graph *graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 	struct stack *st = stack_new(sizeof(struct pkgpair));
@@ -283,10 +284,8 @@ static void crawl_deps(struct pw_hashdb *hashdb, const char *pkgname)
 
 	int ret;
 	struct pkgpair pkgpair, deppkg;
-	const char *curpkg;
 	alpm_list_t *i;
 	alpm_list_t *deps;
-	alpm_list_t *free_list = NULL;
 
 	CURL *curl;
 	curl = curl_easy_init();
@@ -329,24 +328,29 @@ cleanup_deps:
 		alpm_list_free(deps);
 	}
 
-	struct stack *topost = stack_new(sizeof(int));
-	int cycles = graph_toposort(graph, topost);
+	if (!topost) {
+		goto cleanup;
+	}
+
+	int have_cycles = graph_toposort(graph, topost);
 	if (cycles) {
-		pw_printf(PW_LOG_INFO, "Unable to resolve package \"%s\" due to cyclic "
-				  "dependencies.\n", pkgname);
-		goto cleanup;
+		*cycles = have_cycles;
 	}
 
-	if (stack_empty(topost)) {
-		printf("%s has no dependencies.\n", pkgname);
-		goto cleanup;
-	}
+cleanup:
+	stack_free(st);
+	hash_free(resolved);
+	curl_easy_cleanup(curl);
 
+	return graph;
+}
+
+static void print_topo_order(struct graph *graph, struct stack *topost)
+{
 	int idx;
 	int cnt = 0;
+	const char *curpkg;
 
-	printf("\n");
-	pw_printf(PW_LOG_INFO, "\"%s\" topological order: ", pkgname);
 	while (!stack_empty(topost)) {
 		stack_pop(topost, &idx);
 		curpkg = graph_get_vertex_data(graph, idx);
@@ -362,13 +366,6 @@ cleanup_deps:
 	}
 
 	printf("\n");
-
-cleanup:
-	stack_free(st);
-	stack_free(topost);
-	hash_free(resolved);
-	graph_free(graph);
-	curl_easy_cleanup(curl);
 }
 
 /* TODO: Remove. For walking hash table */
@@ -393,10 +390,26 @@ int powaur_crawl(alpm_list_t *targets)
 	}
 
 	alpm_list_t *i;
+	struct graph *graph;
+	struct stack *topost = stack_new(sizeof(int));
+	int have_cycles;
 	for (i = targets; i; i = i->next) {
-		crawl_deps(hashdb, i->data);
+		stack_reset(topost);
+		graph = build_dep_graph(hashdb, i->data, topost, &have_cycles);
+		if (have_cycles) {
+			printf("Cyclic dependencies for package \"%s\"\n", i->data);
+		} else if (stack_empty(topost)) {
+			printf("Package \"%s\" has no dependencies\n", i->data);
+		} else {
+			printf("\n");
+			pw_printf(PW_LOG_INFO, "\"%s\" topological order: ", i->data);
+			print_topo_order(graph, topost);
+		}
+
+		graph_free(graph);
 	}
 
+	stack_free(topost);
 	hashdb_free(hashdb);
 	return 0;
 }
