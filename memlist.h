@@ -15,6 +15,11 @@ struct memlist {
 	int free_inner;
 };
 
+enum {
+	MEMLIST_NORM = 0,
+	MEMLIST_PTR
+};
+
 struct memlist *memlist_new(unsigned int max_elems, unsigned int elemSz, int free_inner);
 /* Returns the final location of data in memlist after addition */
 void *memlist_add(struct memlist *memlist, void *data);

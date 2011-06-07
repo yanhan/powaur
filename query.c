@@ -196,6 +196,10 @@ struct pw_hashdb {
 
 	/* Cache provided->providing key-value mapping */
 	struct hashmap *provides_cache;
+
+	/* Backing store for strings and pkgpair */
+	struct memlist *strpool;
+	struct memlist *pkgpool;
 };
 
 static struct pw_hashdb *hashdb_new(void)
@@ -212,6 +216,9 @@ static struct pw_hashdb *hashdb_new(void)
 
 	/* Cache provided->providing key-value mapping */
 	hashdb->provides_cache = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+
+	hashdb->strpool = memlist_new(4096, sizeof(char *), MEMLIST_PTR);
+	hashdb->pkgpool = memlist_new(4096, sizeof(struct pkgpair), MEMLIST_NORM);
 	return hashdb;
 }
 
@@ -222,6 +229,8 @@ static void hashdb_free(struct pw_hashdb *hashdb)
 	hashbst_free(hashdb->local_provides);
 	hashbst_free(hashdb->sync_provides);
 	hashmap_free(hashdb->provides_cache);
+	memlist_free(hashdb->strpool);
+	memlist_free(hashdb->pkgpool);
 	free(hashdb);
 }
 
@@ -462,12 +471,9 @@ void provides_walk(void *key, void *val)
  * @param dbcache list of pmpkg_t * to be hashed
  * @param htable hash table hashing struct pkgpair
  * @param provides hashbst used to hash provides
- * @param strpool memlist of dynamically allocated strings
- * @param pkgpool memlist of struct pkgpair
  */
 static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
-						  struct hashbst *provides, struct memlist *strpool,
-						  struct memlist *pkgpool)
+						  struct hashbst *provides, struct pw_hashdb *hashdb)
 {
 	alpm_list_t *i, *k;
 	pmpkg_t *pkg;
@@ -484,7 +490,7 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 
 		pkgpair.pkgname = pkgname;
 		pkgpair.pkg = pkg;
-		memlist_ptr = memlist_add(pkgpool, &pkgpair);
+		memlist_ptr = memlist_add(hashdb->pkgpool, &pkgpair);
 		hash_insert(htable, memlist_ptr);
 
 		/* Provides */
@@ -495,7 +501,7 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 			}
 
 			dupstr = xstrdup(buf);
-			memlist_ptr = memlist_add(strpool, &dupstr);
+			memlist_ptr = memlist_add(hashdb->strpool, &dupstr);
 			hashbst_insert(provides, memlist_ptr, (void *) pkgname);
 		}
 	}
@@ -513,9 +519,6 @@ int powaur_crawl(alpm_list_t *targets)
 	struct pkgpair pkgpair;
 	void *memlist_ptr;
 
-	struct memlist *depstrs = memlist_new(4096, sizeof(char *), 1);
-	struct memlist *pkgstore = memlist_new(4096, sizeof(struct pkgpair), 0);
-
 	struct pw_hashdb *hashdb = hashdb_new();
 
 	db = alpm_option_get_localdb();
@@ -524,13 +527,13 @@ int powaur_crawl(alpm_list_t *targets)
 	dbcache = alpm_db_get_pkgcache(db);
 	ASSERT(dbcache != NULL, return error(PW_ERR_LOCALDB_CACHE_NULL));
 
-	hash_packages(dbcache, hashdb->local, hashdb->local_provides, depstrs, pkgstore);
+	hash_packages(dbcache, hashdb->local, hashdb->local_provides, hashdb);
 
 	syncdbs = alpm_option_get_syncdbs();
 	for (i = syncdbs; i; i = i->next) {
 		db = i->data;
 		hash_packages(alpm_db_get_pkgcache(db), hashdb->sync, hashdb->sync_provides,
-					  depstrs, pkgstore);
+					  hashdb);
 	}
 
 	/* Do dependency crawling for target list */
@@ -538,8 +541,6 @@ int powaur_crawl(alpm_list_t *targets)
 		crawl_deps(hashdb, i->data);
 	}
 
-	memlist_free(depstrs);
-	memlist_free(pkgstore);
 	hashdb_free(hashdb);
 	return 0;
 }

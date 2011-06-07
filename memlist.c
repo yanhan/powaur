@@ -8,9 +8,13 @@ struct memlist *memlist_new(unsigned int max_elems, unsigned int elemSz, int fre
 	struct memlist *memlist = xcalloc(1, sizeof(struct memlist));
 	memlist->max_elems = max_elems;
 	memlist->elemSz = elemSz;
-	memlist->free_inner = free_inner;
 	memlist->pool = xcalloc(1, sizeof(struct memlist_node));
 	memlist->pool->data = xcalloc(max_elems, elemSz);
+
+	if (free_inner != MEMLIST_NORM && free_inner != MEMLIST_PTR) {
+		free_inner = MEMLIST_NORM;
+	}
+	memlist->free_inner = free_inner;
 	return memlist;
 }
 
