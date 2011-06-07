@@ -14,6 +14,7 @@ struct pw_hashdb *hashdb_new(void)
 	/* Local and sync db hash tables of struct pkgpair */
 	hashdb->local = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
 	hashdb->sync = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
+	hashdb->aur = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
 
 	/* Local and sync provides */
 	hashdb->local_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
@@ -31,6 +32,7 @@ void hashdb_free(struct pw_hashdb *hashdb)
 {
 	hash_free(hashdb->local);
 	hash_free(hashdb->sync);
+	hash_free(hashdb->aur);
 	hashbst_free(hashdb->local_provides);
 	hashbst_free(hashdb->sync_provides);
 	hashmap_free(hashdb->provides_cache);
@@ -113,6 +115,16 @@ struct pw_hashdb *build_hashdb(void)
 		db = i->data;
 		hash_packages(alpm_db_get_pkgcache(db), hashdb->sync, hashdb->sync_provides,
 					  hashdb);
+	}
+
+	/* Compute AUR packages */
+	for (i = dbcache; i; i = i->next) {
+		pkg = i->data;
+		pkgpair.pkgname = alpm_pkg_get_name(pkg);
+		if (!hash_search(hashdb->sync, &pkgpair)) {
+			memlist_ptr = memlist_add(hashdb->pkgpool, &pkgpair);
+			hash_insert(hashdb->aur, memlist_ptr);
+		}
 	}
 
 	return hashdb;

@@ -9,6 +9,7 @@ struct pw_hashdb {
 	/* Tables of struct pkgpair */
 	struct hash_table *local;
 	struct hash_table *sync;
+	struct hash_table *aur;
 
 	struct hashbst *local_provides;
 	struct hashbst *sync_provides;
