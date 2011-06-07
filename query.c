@@ -4,8 +4,7 @@
 #include "curl.h"
 #include "environment.h"
 #include "graph.h"
-#include "hash.h"
-#include "memlist.h"
+#include "hashdb.h"
 #include "package.h"
 #include "powaur.h"
 #include "query.h"
@@ -150,88 +149,6 @@ int powaur_query(alpm_list_t *targets)
 	}
 
 	return ret;
-}
-
-/* Used for hashing, pkg can be pmpkg_t or aurpkg_t */
-struct pkgpair {
-	const char *pkgname;
-	void *pkg;
-};
-
-static unsigned long pkg_sdbm(void *pkg)
-{
-	const struct pkgpair *pair = pkg;
-	return sdbm(pair->pkgname);
-}
-
-static int pkg_cmp(const void *a, const void *b)
-{
-	/* Some struct pkgpair have no backing pkg yet */
-	if (!a || !b) {
-		return 1;
-	}
-
-	const struct pkgpair *pair1 = a;
-	const struct pkgpair *pair2 = b;
-	return strcmp(pair1->pkgname, pair2->pkgname);
-}
-
-static void *provides_search(void *htable, void *val)
-{
-	struct hash_table *hash = htable;
-	struct pkgpair pkgpair = {
-		val, NULL
-	};
-	return hash_search(hash, &pkgpair);
-}
-
-/* Used for dependency resolution */
-struct pw_hashdb {
-	/* Tables of struct pkgpair */
-	struct hash_table *local;
-	struct hash_table *sync;
-
-	struct hashbst *local_provides;
-	struct hashbst *sync_provides;
-
-	/* Cache provided->providing key-value mapping */
-	struct hashmap *provides_cache;
-
-	/* Backing store for strings and pkgpair */
-	struct memlist *strpool;
-	struct memlist *pkgpool;
-};
-
-static struct pw_hashdb *hashdb_new(void)
-{
-	struct pw_hashdb *hashdb = xcalloc(1, sizeof(struct pw_hashdb));
-
-	/* Local and sync db hash tables of struct pkgpair */
-	hashdb->local = hash_new(HASH_TABLE, pkg_sdbm, pkg_cmp);
-	hashdb->sync = hash_new(HASH_TABLE, pkg_sdbm, pkg_cmp);
-
-	/* Local and sync provides */
-	hashdb->local_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-	hashdb->sync_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-
-	/* Cache provided->providing key-value mapping */
-	hashdb->provides_cache = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-
-	hashdb->strpool = memlist_new(4096, sizeof(char *), MEMLIST_PTR);
-	hashdb->pkgpool = memlist_new(4096, sizeof(struct pkgpair), MEMLIST_NORM);
-	return hashdb;
-}
-
-static void hashdb_free(struct pw_hashdb *hashdb)
-{
-	hash_free(hashdb->local);
-	hash_free(hashdb->sync);
-	hashbst_free(hashdb->local_provides);
-	hashbst_free(hashdb->sync_provides);
-	hashmap_free(hashdb->provides_cache);
-	memlist_free(hashdb->strpool);
-	memlist_free(hashdb->pkgpool);
-	free(hashdb);
 }
 
 /* Change provided package to a package which provides it.
@@ -467,76 +384,15 @@ void provides_walk(void *key, void *val)
 	printf("%s is provided by %s\n", key, val);
 }
 
-/* hashes packages and their provides
- * @param dbcache list of pmpkg_t * to be hashed
- * @param htable hash table hashing struct pkgpair
- * @param provides hashbst used to hash provides
- */
-static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
-						  struct hashbst *provides, struct pw_hashdb *hashdb)
-{
-	alpm_list_t *i, *k;
-	pmpkg_t *pkg;
-	struct pkgpair pkgpair;
-	void *memlist_ptr;
-
-	char buf[1024];
-	char *dupstr;
-	const char *pkgname;
-
-	for (i = dbcache; i; i = i->next) {
-		pkg = i->data;
-		pkgname = alpm_pkg_get_name(pkg);
-
-		pkgpair.pkgname = pkgname;
-		pkgpair.pkg = pkg;
-		memlist_ptr = memlist_add(hashdb->pkgpool, &pkgpair);
-		hash_insert(htable, memlist_ptr);
-
-		/* Provides */
-		for (k = alpm_pkg_get_provides(pkg); k; k = k->next) {
-			snprintf(buf, 1024, "%s", k->data);
-			if (!strtrim_ver(buf)) {
-				continue;
-			}
-
-			dupstr = xstrdup(buf);
-			memlist_ptr = memlist_add(hashdb->strpool, &dupstr);
-			hashbst_insert(provides, memlist_ptr, (void *) pkgname);
-		}
-	}
-}
-
 int powaur_crawl(alpm_list_t *targets)
 {
-	alpm_list_t *i, *k, *syncdbs, *dbcache;
-	pmdb_t *db;
-	pmpkg_t *pkg;
-
-	char buf[1024];
-	const char *pkgname;
-	char *dupstr;
-	struct pkgpair pkgpair;
-	void *memlist_ptr;
-
-	struct pw_hashdb *hashdb = hashdb_new();
-
-	db = alpm_option_get_localdb();
-	ASSERT(db != NULL, return error(PW_ERR_LOCALDB_NULL));
-
-	dbcache = alpm_db_get_pkgcache(db);
-	ASSERT(dbcache != NULL, return error(PW_ERR_LOCALDB_CACHE_NULL));
-
-	hash_packages(dbcache, hashdb->local, hashdb->local_provides, hashdb);
-
-	syncdbs = alpm_option_get_syncdbs();
-	for (i = syncdbs; i; i = i->next) {
-		db = i->data;
-		hash_packages(alpm_db_get_pkgcache(db), hashdb->sync, hashdb->sync_provides,
-					  hashdb);
+	struct pw_hashdb *hashdb = build_hashdb();
+	if (!hashdb) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "Unable to build hash database!\n");
+		return -1;
 	}
 
-	/* Do dependency crawling for target list */
+	alpm_list_t *i;
 	for (i = targets; i; i = i->next) {
 		crawl_deps(hashdb, i->data);
 	}
