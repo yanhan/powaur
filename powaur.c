@@ -120,7 +120,7 @@ static void usage(unsigned short op)
 		printf("      --debug                display debug messages\n");
 		printf("      --verbose              display more messages\n");
 		printf("      --color                Switches on color\n");
-		printf("      --no-color             Switches off color\n");
+		printf("      --nocolor             Switches off color\n");
 	}
 
 cleanup:
