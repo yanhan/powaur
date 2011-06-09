@@ -318,6 +318,11 @@ get_deps:
 	depmod_list = alpm_pkg_get_depends(pkgpair->pkg);
 	for (i = depmod_list; i; i = i->next) {
 		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data), force);
+		/* Possibility of normalize_package fail due to AUR download failing */
+		if (!depname) {
+			alpm_list_free(deps);
+			return -1;
+		}
 		deps = alpm_list_add(deps, (void *) depname);
 	}
 
