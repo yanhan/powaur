@@ -1,4 +1,4 @@
-.TH POWAUR 1 "31-05-2011" "powaur" "powaur manual"
+.TH POWAUR 1 "10-06-2011" "powaur" "powaur manual"
 .SH NAME
 powaur \- an AUR helper with a pacman-like interface
 .SH SYNOPSIS
@@ -27,18 +27,27 @@ packages are provided, all installed packages will be queried.
 .B "-S, --sync"
 Synchronize packages. When used with no options, at least one target is
 required and powaur will attempt to install the target package(s) from the AUR.
-There is no dependency resolution.
+Dependency resolution is now available.
 .IP
 Note that the use of this flag to install AUR packages is discouraged.
 You are adviced to use the -G flag to download PKGBUILDS and review them
 before installing them using makepkg.
 .TP
+.B "-B, --backup"
+Backup the local pacman database. See Backup Usage.
+.TP
+.B "--crawl <package(s)>"
+Shows a valid topological order for the given package(s). The package(s) can
+be from local or sync databases or the AUR. For installed AUR packages, a fresh
+copy of the PKGBUILD will be downloaded and dependency resolution is based on
+the PKGBUILD instead of information in the local database.
+.IP
+NOTE: This option only shows a single valid topological order (there may be
+many other valid topological orders) for the packages.
+.TP
 .B "-M, --maintainer <person>"
 Search the AUR for packages maintained by person. 1 and only 1 maintainer must
 be specified.
-.TP
-.B "-B, --backup"
-Backup the local pacman database. See Backup Usage.
 .TP
 .B "-h, --help"
 Displays help message and exits.
@@ -93,6 +102,10 @@ Searches installed packages for the specified package(s). If no packages were
 specified, then all installed packages will be listed.
 .SH SYNC OPTIONS
 .TP
+.B "--check"
+Only meaningful when used with -u. Will stop -Su before package upgrading. Use
+this flag to check for outdated AUR packages without upgrading them.
+.TP
 .B "-i, --info"
 Searches sync databases, followed by AUR for package information. If no
 packages were specified, then information on all packages from all sync
@@ -101,6 +114,10 @@ databases is displayed.
 .B "-s, --search"
 Searches the AUR for a specified package. Currently, there is only support for
 searching for 1 package.
+.TP
+.B "-u, --upgrade"
+Checks all locally installed AUR packages and updates any outdated AUR packages,
+with all relevant dependencies resolved.
 .TP
 .B "--vote"
 .br
@@ -146,6 +163,6 @@ Dave Reisner - For his kind permission to let powaur use code from cower
 pacman, git - Source code was used from both of these projects, especially
 pacman
 .SH BUG REPORTS
-Please email bug reports to <powaurdev@gmail.com>
+Please email bug reports to <pangyanhan@gmail.com>
 .SH AUTHOR
 Pang Yan Han <pangyanhan@gmail.com>

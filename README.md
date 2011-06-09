@@ -6,10 +6,12 @@ a yaourt / pacman esque interface to the AUR.
 
 Currently, powaur supports:
 
+- Installing packages from the AUR with dependency resolution (v0.1.4)
+- Checking for outdated AUR packages and updating them (v0.1.4)
+- Showing a valid topological order for packages (v0.1.4)
 - Multithreaded downloading of packages from the AUR with dependency resolution
 - Searching for packages on the AUR
 - Querying local and sync databases for package information
-- Installing packages from the AUR (no dependency resolution)
 - Backing up your pacman local database
 - Colorized output (new in v0.1.3)
 
@@ -39,18 +41,6 @@ Inspiration for powaur has come from:
 - git
 
 
-THE -S FLAG
------------
-
-Currently, the `-S` flag does not do any dependency resolution when it comes
-to installing packages. What it does is:
-
-- Downloads the tarball packages from the AUR
-- Unzips them in `/tmp/powaur`
-- Asks the user to edit the PKGBUILD
-- Invokes `makepkg -s` to install the package
-
-
 A NOTE ABOUT THE AUR
 --------------------
 
@@ -76,7 +66,7 @@ Some source code in powaur comes from the following projects:
 BUG REPORTS
 -----------
 
-Please email bug reports to powaurdev@gmail.com .
+Please email bug reports to pangyanhan@gmail.com .
 
 
 AUTHOR

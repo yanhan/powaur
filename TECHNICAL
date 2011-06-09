@@ -110,17 +110,23 @@ In the case that not all settings are specified in the config file, powaur
 wll fall back to defaults for those unspecified settings.
 
 
----------------------------------
-DEPENDENCY RESOLUTION for -G flag
----------------------------------
+---------------------
+DEPENDENCY RESOLUTION
+---------------------
 
-The -G flag supports a limited form of dependency resolution. It DOES NOT
-recognize version strings, ie. to say if you have something like:
+powaur offers a form of partial dependency resolution. Why do I say partial?
+Because we do not take into account of:
 
-pacman>=3.5
+1. Version strings
+2. Conflicts
 
-inside a PKGBUILD, powaur recognizes the "pacman" part and discards the version
-string.
+Currently, dependency resolution works by
+1. Checking immediate dependencies
+2. "Normalize" dependencies, ie. to say, find it in a local/sync database OR
+   provides, then finally the AUR
+3. For any dependencies from the AUR, goto step 1
 
+A dependency graph is built and topologically sorted and checked for cyclic
+dependencies. The operation will abort when cyclic dependencies are detected.
 
 That's all for now. Thanks for reading!
