@@ -114,6 +114,7 @@ static void usage(unsigned short op)
 
 		if (op == PW_OP_SYNC) {
 			printf("      --check                Works with -u, checks for outdated packages without upgrading\n");
+			printf("  -u, --upgrade              Updates outdated AUR packages\n");
 			printf("      --vote                 order search results by votes\n");
 		}
 
