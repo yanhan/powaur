@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <alpm.h>
 
 #include "hash.h"
 #include "wrapper.h"
@@ -159,6 +160,25 @@ void *hash_search(struct hash_table *htable, void *data)
 int hash_pos(struct hash_table *htable, void *data)
 {
 	return htable->vtbl->pos(htable, data);
+}
+
+alpm_list_t *hash_to_list(struct hash_table *htable)
+{
+	alpm_list_t *data_list = NULL;
+	/* TODO: Remove type variable */
+	if (htable->type != HASH_TABLE) {
+		return NULL;
+	}
+
+	unsigned int i;
+	struct hash_table_entry *array = htable->table;
+	for (i = 0; i < htable->sz; ++i) {
+		if (array[i].u.data) {
+			data_list = alpm_list_add(data_list, array[i].u.data);
+		}
+	}
+
+	return data_list;
 }
 
 /*******************************************************************************

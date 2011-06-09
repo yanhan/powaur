@@ -480,10 +480,10 @@ static int question(int preset, const char *fmt, va_list args)
 			return preset;
 		} else {
 			if (!strcasecmp(str, "n") || !strcasecmp(str, "no")) {
-				print_repeat('-', len);
+				print_repeat('-', qlen);
 				return 0;
 			} else if (!strcasecmp(str, "y") || !strcasecmp(str, "yes")) {
-				print_repeat('-', len);
+				print_repeat('-', qlen);
 				return 1;
 			}
 		}

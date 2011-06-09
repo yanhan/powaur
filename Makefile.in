@@ -86,7 +86,7 @@ download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
 handle.o json.o powaur.o: handle.h
 hash.o hashdb.o sync.o: hash.h
-query.o: hashdb.h
+query.o sync.o: hashdb.h
 handle.o powaur.o sync.o: json.h
 hashdb.o powaur.o: memlist.h
 query.o powaur.o sync.o: package.h

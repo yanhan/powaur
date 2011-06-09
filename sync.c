@@ -13,6 +13,7 @@
 #include "error.h"
 #include "graph.h"
 #include "hash.h"
+#include "hashdb.h"
 #include "json.h"
 #include "package.h"
 #include "powaur.h"
@@ -180,6 +181,8 @@ static alpm_list_t *get_install_results(alpm_list_t *universe, alpm_list_t *org_
 }
 
 /* Installs a single succesfully downloaded PKGBUILD using makepkg -si
+ * Assumes that the package has been extracted into its own directory
+ *
  * returns 0 if installation is successful
  * returns -1 for errors, -2 for fatal errors
  */
@@ -191,13 +194,6 @@ static int install_single_package(char *pkgname)
 	char buf[PATH_MAX];
 	char *dotinstall;
 	pid_t pid;
-
-	snprintf(buf, PATH_MAX, "%s.tar.gz", pkgname);
-
-	ret = extract_file(buf);
-	if (ret) {
-		return error(PW_ERR_FILE_EXTRACT);
-	}
 
 	if (!getcwd(cwd, PATH_MAX)) {
 		return error(PW_ERR_GETCWD);
@@ -301,6 +297,7 @@ static int install_packages(alpm_list_t *targets, alpm_list_t **success)
 {
 	alpm_list_t *i;
 	int ret, status;
+	char buf[PATH_MAX];
 
 	ret = status = 0;
 	for (i = targets; i; i = i->next) {
@@ -309,6 +306,13 @@ static int install_packages(alpm_list_t *targets, alpm_list_t **success)
 		pw_fprintf(PW_LOG_WARNING, stderr,
 				   "Installing unsupported package %s\n         "
 				   "You are advised to look through the PKGBUILD.\n", i->data);
+
+
+		snprintf(buf, PATH_MAX, "%s.tar.gz", i->data);
+		if (extract_file(buf)) {
+			pw_fprintf(PW_LOG_ERROR, stderr, "Unable to extract package \"%s\"", i->data);
+			continue;
+		}
 
 		status = install_single_package((char *) i->data);
 		if (status == -2) {
@@ -518,150 +522,194 @@ cleanup:
 	return found ? 0 : -1;
 }
 
-/* TODO: Build dependency graph for ALL targets instead of 1 by 1
+/* Installs packages from the AUR
+ * Assumes we are already in directory with all the relevant PKGBUILDS dled
+ *
+ * @param hashdb hash database
+ * @param targets targets to be installed, in topo order
+ */
+static int topo_install(struct pw_hashdb *hashdb, alpm_list_t *targets)
+{
+	alpm_list_t *i;
+	int ret;
+
+	pw_printf(PW_LOG_INFO, "Upgrading:\n");
+	for (i = targets; i; i = i->next) {
+		printf("%s%s%s\n", color.bred, i->data, color.nocolor);
+	}
+
+	for (i = targets; i; i = i->next) {
+		ret = install_single_package(i->data);
+		if (ret == -2) {
+			return ret;
+		}
+	}
+	return 0;
+}
+
+/* Generates the list of packages we are going to install from the AUR, in
+ * topological order.
+ *
+ * @param hashdb hash database
+ * @param graph graph of package strings
+ * @param topost stack containing topological order of packages
+ */
+static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *graph,
+									 struct stack *topost)
+{
+	int curVertex, cnt = 0;
+	const char *pkgname;
+	enum pkgfrom_t *from = NULL;
+	alpm_list_t *final_targets = NULL;
+
+	pw_printf(PW_LOG_INFO, "Dependency graph:\n");
+	while (!stack_empty(topost)) {
+		stack_pop(topost, &curVertex);
+		pkgname = graph_get_vertex_data(graph, curVertex);
+		from = hashmap_search(hashdb->pkg_from, (void *) pkgname);
+
+		if (cnt++) {
+			printf(" -> ");
+		}
+		switch (*from) {
+		case PKG_FROM_LOCAL:
+			pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bblue, pkgname, color.nocolor);
+			break;
+		case PKG_FROM_SYNC:
+			pw_printf(PW_LOG_NORM, "%s%s (found in sync)%s", color.byellow, pkgname, color.nocolor);
+			break;
+		case PKG_FROM_AUR:
+			/* Magic happens here */
+			if (hash_search(hashdb->aur_outdated, (void *) pkgname)) {
+				pw_printf(PW_LOG_NORM, "%s%s (AUR)%s", color.bred, pkgname, color.nocolor);
+				final_targets = alpm_list_add(final_targets, (void *) pkgname);
+			} else {
+				pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bblue, pkgname, color.nocolor);
+			}
+			break;
+		default:
+			/* Shouldn't happen */
+			pw_printf(PW_LOG_NORM, "Unknown");
+			break;
+		}
+	}
+
+	printf("\n\n");
+	return final_targets;
+}
+
+/* TODO: Resolve all deps instead of one by one
  * -Su, experimental feature
  * @param targets list of struct aurpkg_t *
  */
-static int upgrade_pkgs(alpm_list_t *targets)
+static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 {
-	alpm_list_t *i, *k;
-	alpm_list_t *deps, *free_list = NULL;
-	alpm_list_t *resolve;
-	struct aurpkg_t *pkg;
+	alpm_list_t *i;
+	alpm_list_t *target_pkgs = NULL;
+	alpm_list_t *final_targets = NULL;
+	struct aurpkg_t *aurpkg;
 	struct graph *graph;
-	struct stack *st;
-	char *pkgname;
+	struct stack *topost;
+	int ret = 0;
 
-	st = stack_new(sizeof(char *));
+	char cwd[PATH_MAX];
+	if (!getcwd(cwd, PATH_MAX)) {
+		return error(PW_ERR_GETCWD);
+	}
+
+	if (chdir(powaur_dir)) {
+		return error(PW_ERR_CHDIR);
+	}
+
+	graph = NULL;
+	topost = stack_new(sizeof(int));
+
 	for (i = targets; i; i = i->next) {
-		pkg = i->data;
-		graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-
-		stack_reset(st);
-		stack_push(st, &pkg->name);
-		while (!stack_empty(st)) {
-			stack_pop(st, &pkgname);
-			if (!pkgname) {
-				printf("NULL package detected!\n");
-				continue;
-			} else {
-				printf("Now at package %s\n", pkgname);
-			}
-
-			resolve = NULL;
-			resolve = alpm_list_add(resolve, pkgname);
-			deps = resolve_dependencies(resolve);
-
-			for (k = deps; k; k = k->next) {
-				/* add dep -> pkgname edge */
-				graph_add_edge(graph, k->data, pkgname);
-				stack_push(st, &k->data);
-			}
-
-			free_list = alpm_list_add(free_list, deps);
-			alpm_list_free(resolve);
-		}
-
-		/* Print topological order */
-		struct stack *topost = stack_new(sizeof(int));
-		int cycles = graph_toposort(graph, topost);
-		int t;
-		int cnt = 0;
-		if (cycles) {
-			printf("Cyclic dependencies for %s\n", i->data);
-		} else {
-			while (!stack_empty(topost)) {
-				stack_pop(topost, &t);
-				pkgname = graph_get_vertex_data(graph, t);
-				if (!pkgname) {
-					continue;
-				}
-
-				if (stack_empty(topost)) {
-					printf("%s", pkgname);
-				} else {
-					printf("%s -> ", pkgname);
-				}
-			}
-		}
-
-		stack_free(topost);
-		graph_free(graph);
+		aurpkg = i->data;
+		target_pkgs = alpm_list_add(target_pkgs, aurpkg->name);
+		/* Insert into outdated AUR packages to avoid dling up to date ones */
+		hash_insert(hashdb->aur_outdated, (void *) aurpkg->name);
 	}
 
-	for (i = free_list; i; i = i->next) {
-		FREELIST(i->data);
+	/* Build dep graph for all packages */
+	build_dep_graph(&graph, hashdb, target_pkgs, GRAPH_NOT_DETAILED, NOFORCE);
+	ret = graph_toposort(graph, topost);
+	if (ret) {
+		printf("Cyclic dependencies detected in package \"%s\"\n", aurpkg->name);
+		goto cleanup;
 	}
 
-	alpm_list_free(free_list);
-	stack_free(st);
-	return 0;
+	/* TODO: Remove this? Not too informative for users */
+	final_targets = topo_get_targets(hashdb, graph, topost);
+	if (final_targets) {
+		topo_install(hashdb, final_targets);
+	}
+
+cleanup:
+	/* Install in topo order */
+	graph_free(graph);
+	stack_free(topost);
+	alpm_list_free(target_pkgs);
+	alpm_list_free(final_targets);
+	if (chdir(cwd)) {
+		return error(PW_ERR_RESTORECWD);
+	}
+
+	return ret;
 }
 
 /* Returns a list of outdated AUR packages.
  * The list and the packages are to be freed by the caller.
+ *
+ * @param curl curl easy handle
+ * @param targets list of strings (package names) that are _definitely_ AUR packages
  */
-static alpm_list_t *get_outdated_pkgs(CURL *curl, alpm_list_t *targets)
+static alpm_list_t *get_outdated_pkgs(CURL *curl, struct pw_hashdb *hashdb,
+									  alpm_list_t *targets)
 {
-	alpm_list_t *i, *dbcache, *syncdbs;
-	alpm_list_t *newtargs = NULL;
+	alpm_list_t *i;
 	alpm_list_t *outdated_pkgs = NULL;
-	alpm_list_t *pkglist;
-	pmdb_t *localdb;
-	pmpkg_t *lpkg;
+	alpm_list_t *pkglist, *targs;
+	struct pkgpair pkgpair;
+	struct pkgpair *pkgpair_ptr;
 	struct aurpkg_t *aurpkg;
 	const char *pkgname, *pkgver;
 
-	localdb = alpm_option_get_localdb();
-	if (!localdb) {
-		error(PW_ERR_LOCALDB_NULL);
-		return NULL;
-	}
-
-	dbcache = alpm_db_get_pkgcache(localdb);
-	if (!dbcache) {
-		error(PW_ERR_LOCALDB_CACHE_NULL);
-		return NULL;
-	}
-
-	syncdbs = alpm_option_get_syncdbs();
-
-	/* For specific checks, see if the packages actually exist in localdb */
 	if (targets) {
-		for (i = targets; i; i = i->next) {
-			lpkg = cache_find_pkg(dbcache, i->data);
-			if (lpkg) {
-				newtargs = alpm_list_add(newtargs, lpkg);
-			}
-		}
-
-		i = newtargs;
+		targs = targets;
 	} else {
-		/* Check ALL localdb packages */
-		i = dbcache;
+		targs = NULL;
+		alpm_list_t *tmp_targs = hash_to_list(hashdb->aur);
+		for (i = tmp_targs; i; i = i->next) {
+			pkgpair_ptr = i->data;
+			targs = alpm_list_add(targs, (void *) pkgpair_ptr->pkgname);
+		}
+		alpm_list_free(tmp_targs);
 	}
 
-	for (; i; i = i->next) {
-		lpkg = i->data;
-		pkgname = alpm_pkg_get_name(lpkg);
-		pkgver = alpm_pkg_get_version(lpkg);
-
-		/* If pkg is not found in any sync db, it is from AUR */
-		lpkg = dbs_find_pkg(syncdbs, pkgname);
-		if (lpkg) {
-			continue;
-		}
-
-		pkglist = query_aur(curl, pkgname, AUR_QUERY_INFO);
+	for (i = targs; i; i = i->next) {
+		pkglist = query_aur(curl, i->data, AUR_QUERY_INFO);
 		if (!pkglist) {
 			continue;
 		}
 
+		pkgpair.pkgname = i->data;
+		pkgpair_ptr = hash_search(hashdb->aur, &pkgpair);
+		if (!pkgpair_ptr) {
+			/* Shouldn't happen */
+			pw_fprintf(PW_LOG_ERROR, stderr, "Unable to find AUR package \"%s\""
+					   "in hashdb!\n", i->data);
+		}
+
 		aurpkg = pkglist->data;
+		pkgver = alpm_pkg_get_version(pkgpair_ptr->pkg);
+		pkgname = i->data;
+
 		if (alpm_pkg_vercmp(aurpkg->version, pkgver) > 0) {
 			/* Just show outdated package for now */
-			pw_printf(PW_LOG_INFO, "%s %s is outdated, %s is available\n",
-					  pkgname, pkgver, aurpkg->version);
+			pw_printf(PW_LOG_INFO, "%s %s is outdated, %s%s%s%s is available\n",
+					  pkgname, pkgver, color.bred, aurpkg->version,
+					  color.nocolor, color.bold);
 
 			/* Add to upgrade list */
 			outdated_pkgs = alpm_list_add(outdated_pkgs, aurpkg);
@@ -675,7 +723,9 @@ static alpm_list_t *get_outdated_pkgs(CURL *curl, alpm_list_t *targets)
 		alpm_list_free(pkglist);
 	}
 
-	alpm_list_free(newtargs);
+	if (!targets) {
+		alpm_list_free(targs);
+	}
 	return outdated_pkgs;
 }
 
@@ -683,13 +733,50 @@ static alpm_list_t *get_outdated_pkgs(CURL *curl, alpm_list_t *targets)
 static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 {
 	int ret = 0;
+	int cnt = 0;
 	int upgrade_all;
-	alpm_list_t *outdated_pkgs = NULL;
+	struct pkgpair pkgpair;
+	struct pw_hashdb *hashdb = build_hashdb();
+	if (!hashdb) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "Failed to build hash database.");
+		return -1;
+	}
 
-	outdated_pkgs = get_outdated_pkgs(curl, targets);
+	/* Make sure that packages are from AUR */
+	alpm_list_t *i, *new_targs = NULL;
+	for (i = targets; i; i = i->next) {
+		pkgpair.pkgname = i->data;
+		if (!hash_search(hashdb->aur, &pkgpair)) {
+			if (cnt++) {
+				printf(", ");
+			}
+
+			pw_printf(PW_LOG_NORM, "%s", i->data);
+		} else {
+			new_targs = alpm_list_add(new_targs, i->data);
+		}
+	}
+
+	if (cnt > 1) {
+		printf(" are not AUR packages and will not be checked.\n");
+	} else if (cnt == 1) {
+		printf(" is not an AUR package and will not be checked.\n");
+	}
+
+	alpm_list_t *outdated_pkgs = NULL;
+	if (!targets) {
+		/* Check all AUR packages */
+		outdated_pkgs = get_outdated_pkgs(curl, hashdb, NULL);
+	} else {
+		if (!new_targs) {
+			goto cleanup;
+		}
+
+		outdated_pkgs = get_outdated_pkgs(curl, hashdb, new_targs);
+	}
 
 	if (!outdated_pkgs) {
-		pw_printf(PW_LOG_INFO, "No AUR packages are outdated.\n");
+		pw_printf(PW_LOG_INFO, "All AUR packages are up to date.\n");
 		goto cleanup;
 	}
 
@@ -706,12 +793,14 @@ static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 	upgrade_all = yesno("Do you wish to upgrade the above packages?");
 	if (upgrade_all) {
 		/* Experimental */
-		ret = upgrade_pkgs(outdated_pkgs);
+		ret = upgrade_pkgs(outdated_pkgs, hashdb);
 	}
 
 cleanup:
 	alpm_list_free_inner(outdated_pkgs, (alpm_list_fn_free) aurpkg_free);
 	alpm_list_free(outdated_pkgs);
+	alpm_list_free(new_targs);
+	hashdb_free(hashdb);
 	return ret;
 }
 

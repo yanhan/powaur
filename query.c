@@ -152,103 +152,173 @@ int powaur_query(alpm_list_t *targets)
 }
 
 /* Change provided package to a package which provides it.
+ * For AUR packages, this also downloads and extracts PKGBUILD in cwd.
+ * In addition, the "normalized" packages will be cached in hashdb->pkg_from
+ *
+ * @param curl curl handle
  * @param hashdb hash database
  * @param pkg package name
+ * @param force force dl of AUR packages
  *
- * returns a package providing pkg if present, else returns pkg
+ * returns the "normalized" package if present, NULL on failure
  */
-static const char *normalize_package(struct pw_hashdb *hashdb, const char *pkgname)
+static const char *normalize_package(CURL *curl, struct pw_hashdb *hashdb,
+									 const char *pkgname, int force)
 {
 	const char *provided = NULL;
 	struct pkgpair pkgpair;
 	struct pkgpair *pkgptr;
+	enum pkgfrom_t *pkgfrom;
 
 	pkgpair.pkgname = pkgname;
 	pkgpair.pkg = NULL;
 
-	/* If it's in local / sync db, done */
-	if (hash_search(hashdb->local, &pkgpair) || hash_search(hashdb->sync, &pkgpair)) {
+	/* If we know where pkg is from and it's not AUR (unresolved), done */
+	pkgfrom = hashmap_search(hashdb->pkg_from, (void *) pkgname);
+	if (pkgfrom) {
+		if (*pkgfrom != PKG_FROM_AUR ||
+			hash_search(hashdb->aur_downloaded, (void *) pkgname)) {
+			return pkgname;
+		}
+
+		goto search_aur;
+	}
+
+	/* If it's in local db and not AUR, done */
+	if (hash_search(hashdb->local, &pkgpair)) {
+		if (hash_search(hashdb->aur, &pkgpair)) {
+			goto search_aur;
+		}
+		hashmap_insert(hashdb->pkg_from, (void *) pkgname, &hashdb->pkg_from_local);
 		return pkgname;
 	}
 
-	/* Search cache */
+	/* Search provides cache */
 	provided = hashmap_search(hashdb->provides_cache, (void *) pkgname);
 	if (provided) {
 		return provided;
 	}
 
-	/* Search local and sync provides */
-	/* Search local provides tree */
+	/* Search local provides */
 	pkgptr = hashbst_tree_search(hashdb->local_provides, (void *) pkgname,
 								 hashdb->local, provides_search);
-	if (!pkgptr) {
-		pkgptr = hashbst_tree_search(hashdb->local_provides, (void *) pkgname,
-									 hashdb->sync, provides_search);
-	}
-
 	if (pkgptr) {
-		/* Cache and return */
+		/* Cache in provides and pkg_from */
 		hashmap_insert(hashdb->provides_cache, (void *) pkgname,
 					   (void *) pkgptr->pkgname);
-		provided = pkgptr->pkgname;
-		goto done;
+		hashmap_insert(hashdb->pkg_from, (void *) pkgptr->pkgname, &hashdb->pkg_from_local);
+		return pkgptr->pkgname;
 	}
 
-	/* Search sync provides tree */
+	/* Search sync provides tree in local db */
 	pkgptr = hashbst_tree_search(hashdb->sync_provides, (void *) pkgname,
 								 hashdb->local, provides_search);
 
-	if (!pkgptr) {
-		pkgptr = hashbst_tree_search(hashdb->sync_provides, (void *) pkgname,
-									 hashdb->sync, provides_search);
+	if (pkgptr) {
+		/* Cache in pkg_from */
+		hashmap_insert(hashdb->pkg_from, (void *) pkgptr->pkgname, &hashdb->pkg_from_local);
+		return pkgptr->pkgname;
 	}
 
-	if (pkgptr) {
-		/* Cache and return */
-		hashmap_insert(hashdb->provides_cache, (void *) pkgname, (void *) pkgptr->pkgname);
-		provided = pkgptr->pkgname;
+	/* Search sync db */
+	if (hash_search(hashdb->sync, &pkgpair)) {
+		hashmap_insert(hashdb->pkg_from, (void *) pkgname, &hashdb->pkg_from_sync);
+		return pkgname;
 	}
+
+	/* Sync provides */
+	pkgptr = hashbst_tree_search(hashdb->sync_provides, (void *) pkgname,
+								 hashdb->sync, provides_search);
+	if (pkgptr) {
+		hashmap_insert(hashdb->pkg_from, (void *) pkgptr->pkgname,
+					   &hashdb->pkg_from_sync);
+		hashmap_insert(hashdb->provides_cache, (void *) pkgname, (void *) pkgptr->pkgname);
+		return pkgptr->pkgname;
+	}
+
+search_aur:
+	pkgpair.pkgname = pkgname;
+	pkgpair.pkg = NULL;
+	/* Don't bother downloading installed AUR packages which are up to date */
+	if (force == NOFORCE) {
+		if (hash_search(hashdb->aur, &pkgpair) &&
+			!hash_search(hashdb->aur_outdated, (void *) pkgname)) {
+			goto done;
+		}
+	}
+
+	/* Download and extract from AUR */
+	if (dl_extract_single_package(curl, pkgname, NULL)) {
+		return NULL;
+	}
+
+	hash_insert(hashdb->aur_downloaded, (void *) pkgname);
+	hashmap_insert(hashdb->pkg_from, (void *) pkgname, &hashdb->pkg_from_aur);
 
 done:
-	return provided ? provided : pkgname;
+	return pkgname;
 }
 
-/* @param hashdb hash database
+/* Resolve dependencies for a given package
+ * @param curl curl handle
+ * @param hashdb hash database
  * @param curpkg current package we are resolving
  * @param dep_list pointer to list to store resulting dependencies
- * @param verbose switch on detailed dependency resolution
+ * @param force force dl of AUR packages
  *
- * returns 1 if curpkg is a "provided" and non-existent pkg, 0 otherwise.
+ * returns -1 on error, 0 on success
  */
-static int crawl_resolve(struct pw_hashdb *hashdb, struct pkgpair *curpkg,
-						 alpm_list_t **dep_list, int verbose)
+static int crawl_resolve(CURL *curl, struct pw_hashdb *hashdb, struct pkgpair *curpkg,
+						 alpm_list_t **dep_list, int force)
 {
 	alpm_list_t *i, *depmod_list, *deps = NULL;
 	struct pkgpair *pkgpair;
+	struct pkgpair tmppkg;
 	void *pkg_provides;
+	void *memlist_ptr;
 	const char *cache_result;
 	const char *depname, *final_pkgname;
+	char cwd[PATH_MAX];
 
-	/* Search in local and sync db first */
-	pkgpair = hash_search(hashdb->local, curpkg);
+	/* Normalize package before doing anything else */
+	final_pkgname = normalize_package(curl, hashdb, curpkg->pkgname, force);
+	if (!final_pkgname) {
+		return -1;
+	}
+
+	enum pkgfrom_t *from = hashmap_search(hashdb->pkg_from, (void *) final_pkgname);
+	if (!from) {
+		die("Failed to find out where package \"%s\" is from!\n", final_pkgname);
+	}
+
+	switch (*from) {
+	case PKG_FROM_LOCAL:
+		tmppkg.pkgname = final_pkgname;
+		pkgpair = hash_search(hashdb->local, &tmppkg);
+		goto get_deps;
+	case PKG_FROM_SYNC:
+		tmppkg.pkgname = final_pkgname;
+		pkgpair = hash_search(hashdb->sync, &tmppkg);
+		goto get_deps;
+	default:
+		goto aur_deps;
+	}
+
+aur_uptodate:
+	tmppkg.pkgname = final_pkgname;
+	tmppkg.pkg = NULL;
+	pkgpair = hash_search(hashdb->aur, &tmppkg);
+
+get_deps:
 	if (!pkgpair) {
-		pkgpair = hash_search(hashdb->sync, curpkg);
+		/* Shouldn't happen */
+		die("Unable to find package \"%s\" in local/sync db!", final_pkgname);
 	}
 
-	/* If the pkg can be found in a db, just skip for non-verbose */
-	if (!verbose && pkgpair) {
-		dep_list = NULL;
-		return 0;
-	}
-
-	if (!pkgpair) {
-		goto search_provides;
-	}
-
-	/* pkg is installed, return its deps */
+	/* pkg is in local/sync, return its deps */
 	depmod_list = alpm_pkg_get_depends(pkgpair->pkg);
 	for (i = depmod_list; i; i = i->next) {
-		depname = normalize_package(hashdb, alpm_dep_get_name(i->data));
+		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data), force);
 		deps = alpm_list_add(deps, (void *) depname);
 	}
 
@@ -260,28 +330,66 @@ static int crawl_resolve(struct pw_hashdb *hashdb, struct pkgpair *curpkg,
 
 	return 0;
 
-search_provides:
-	/* Search cache provides hash map */
-	final_pkgname = normalize_package(hashdb, curpkg->pkgname);
-	if (final_pkgname != curpkg->pkgname) {
-		if (dep_list) {
-			*dep_list = alpm_list_add(NULL, (void *) final_pkgname);
-		}
+aur_deps:
+	tmppkg.pkgname = final_pkgname;
+	tmppkg.pkg = NULL;
 
-		return 1;
+	/* For installed AUR packages which are up to date */
+	if (force == NOFORCE) {
+		if (hash_search(hashdb->aur, &tmppkg) &&
+			!hash_search(hashdb->aur_outdated, (void *) final_pkgname)) {
+			/* NOTE: top goto ! */
+			goto aur_uptodate;
+		}
 	}
 
+	/* Extract deps */
+	if (!getcwd(cwd, PATH_MAX)) {
+		return error(PW_ERR_GETCWD);
+	}
+
+	if (chdir(final_pkgname)) {
+		return error(PW_ERR_CHDIR);
+	}
+
+	deps = grab_dependencies("PKGBUILD");
+	if (chdir(cwd)) {
+		alpm_list_free(deps);
+		return error(PW_ERR_RESTORECWD);
+	}
+
+	if (dep_list) {
+		const char *normdep;
+		alpm_list_t *new_deps = NULL;
+
+		/* Transfer control to memlist and normalize packages */
+		for (i = deps; i; i = i->next) {
+			memlist_ptr = memlist_add(hashdb->strpool, &i->data);
+			normdep = normalize_package(curl, hashdb, memlist_ptr, force);
+			new_deps = alpm_list_add(new_deps, (void *) normdep);
+		}
+
+		*dep_list = new_deps;
+	}
+
+	alpm_list_free(deps);
 	return 0;
 }
 
-struct graph *build_dep_graph(struct pw_hashdb *hashdb, const char *pkgname,
-							  struct stack *topost, int *cycles)
+void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
+					 alpm_list_t *targets, int detailed, int force)
 {
-	struct graph *graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	if (!graph) {
+		return;
+	}
+
+	if (!*graph) {
+		*graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	}
+
 	struct stack *st = stack_new(sizeof(struct pkgpair));
 	struct hash_table *resolved = hash_new(HASH_TABLE, (pw_hash_fn) sdbm,
 										   (pw_hashcmp_fn) strcmp);
-
 	int ret;
 	struct pkgpair pkgpair, deppkg;
 	alpm_list_t *i;
@@ -294,33 +402,38 @@ struct graph *build_dep_graph(struct pw_hashdb *hashdb, const char *pkgname,
 		return;
 	}
 
-	pkgpair.pkgname = pkgname;
-	pkgpair.pkg = NULL;
+	/* Push all packages down stack */
+	for (i = targets; i; i = i->next) {
+		pkgpair.pkgname = i->data;
+		pkgpair.pkg = NULL;
+		stack_push(st, &pkgpair);
+	}
 
-	stack_push(st, &pkgpair);
 	while (!stack_empty(st)) {
 		stack_pop(st, &pkgpair);
 		deps = NULL;
 
-		ret = crawl_resolve(hashdb, &pkgpair, &deps, 1);
-		if (ret) {
-			/* Provided package, just push onto stack */
-			deppkg.pkgname = deps->data;
-			deppkg.pkg = NULL;
-			stack_push(st, &deppkg);
-			alpm_list_free(deps);
-			continue;
-		} else if (hash_search(resolved, (void *) pkgpair.pkgname)) {
+		if (hash_search(resolved, (void *) pkgpair.pkgname)) {
 			goto cleanup_deps;
+		}
+
+		ret = crawl_resolve(curl, hashdb, &pkgpair, &deps, force);
+		if (ret) {
+			pw_fprintf(PW_LOG_ERROR, stderr, "Error in resolving packages.\n");
+			goto cleanup;
 		}
 
 		for (i = deps; i; i = i->next) {
 			deppkg.pkgname = i->data;
 			deppkg.pkg = NULL;
-			stack_push(st, &deppkg);
+
+			/* Continue resolution for detailed */
+			if (detailed == GRAPH_DETAILED) {
+				stack_push(st, &deppkg);
+			}
 
 			/* dep --> current */
-			graph_add_edge(graph, i->data, (void *) pkgpair.pkgname);
+			graph_add_edge(*graph, i->data, (void *) pkgpair.pkgname);
 		}
 
 		hash_insert(resolved, (void *) pkgpair.pkgname);
@@ -328,24 +441,13 @@ cleanup_deps:
 		alpm_list_free(deps);
 	}
 
-	if (!topost) {
-		goto cleanup;
-	}
-
-	int have_cycles = graph_toposort(graph, topost);
-	if (cycles) {
-		*cycles = have_cycles;
-	}
-
 cleanup:
-	stack_free(st);
 	hash_free(resolved);
+	stack_free(st);
 	curl_easy_cleanup(curl);
-
-	return graph;
 }
 
-static void print_topo_order(struct graph *graph, struct stack *topost)
+void print_topo_order(struct graph *graph, struct stack *topost)
 {
 	int idx;
 	int cnt = 0;
@@ -389,17 +491,22 @@ int powaur_crawl(alpm_list_t *targets)
 		return -1;
 	}
 
-	alpm_list_t *i;
+	alpm_list_t *i, *target_pkgs;
 	struct graph *graph;
 	struct stack *topost = stack_new(sizeof(int));
 	int have_cycles;
 	for (i = targets; i; i = i->next) {
 		stack_reset(topost);
-		graph = build_dep_graph(hashdb, i->data, topost, &have_cycles);
+		graph = NULL;
+		target_pkgs = alpm_list_add(NULL, i->data);
+		build_dep_graph(&graph, hashdb, target_pkgs, GRAPH_DETAILED, FORCE_DL);
 		if (have_cycles) {
 			printf("Cyclic dependencies for package \"%s\"\n", i->data);
-		} else if (stack_empty(topost)) {
-			printf("Package \"%s\" has no dependencies\n", i->data);
+		}
+
+		graph_toposort(graph, topost);
+		if (stack_empty(topost)) {
+			printf("Package \"%s\" has no dependencies.\n", i->data);
 		} else {
 			printf("\n");
 			pw_printf(PW_LOG_INFO, "\"%s\" topological order: ", i->data);
@@ -407,6 +514,7 @@ int powaur_crawl(alpm_list_t *targets)
 		}
 
 		graph_free(graph);
+		alpm_list_free(target_pkgs);
 	}
 
 	stack_free(topost);

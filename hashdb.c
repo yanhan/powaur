@@ -4,6 +4,7 @@
 #include "hashdb.h"
 #include "hash.h"
 #include "memlist.h"
+#include "powaur.h"
 #include "wrapper.h"
 #include "util.h"
 
@@ -11,10 +12,13 @@ struct pw_hashdb *hashdb_new(void)
 {
 	struct pw_hashdb *hashdb = xcalloc(1, sizeof(struct pw_hashdb));
 
-	/* Local and sync db hash tables of struct pkgpair */
+	/* Local, sync, AUR db hash tables of struct pkgpair */
 	hashdb->local = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
 	hashdb->sync = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
 	hashdb->aur = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
+
+	hashdb->aur_downloaded = hash_new(HASH_TABLE, (pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	hashdb->aur_outdated = hash_new(HASH_TABLE, (pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 
 	/* Local and sync provides */
 	hashdb->local_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
@@ -22,9 +26,16 @@ struct pw_hashdb *hashdb_new(void)
 
 	/* Cache provided->providing key-value mapping */
 	hashdb->provides_cache = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	hashdb->pkg_from = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 
 	hashdb->strpool = memlist_new(4096, sizeof(char *), MEMLIST_PTR);
 	hashdb->pkgpool = memlist_new(4096, sizeof(struct pkgpair), MEMLIST_NORM);
+
+	/* Initialize pkgfrom_t */
+	hashdb->pkg_from_unknown = PKG_FROM_UNKNOWN;
+	hashdb->pkg_from_local = PKG_FROM_LOCAL;
+	hashdb->pkg_from_sync = PKG_FROM_SYNC;
+	hashdb->pkg_from_aur = PKG_FROM_AUR;
 	return hashdb;
 }
 
@@ -33,9 +44,12 @@ void hashdb_free(struct pw_hashdb *hashdb)
 	hash_free(hashdb->local);
 	hash_free(hashdb->sync);
 	hash_free(hashdb->aur);
+	hash_free(hashdb->aur_downloaded);
+	hash_free(hashdb->aur_outdated);
 	hashbst_free(hashdb->local_provides);
 	hashbst_free(hashdb->sync_provides);
 	hashmap_free(hashdb->provides_cache);
+	hashmap_free(hashdb->pkg_from);
 	memlist_free(hashdb->strpool);
 	memlist_free(hashdb->pkgpool);
 	free(hashdb);
@@ -121,9 +135,11 @@ struct pw_hashdb *build_hashdb(void)
 	for (i = dbcache; i; i = i->next) {
 		pkg = i->data;
 		pkgpair.pkgname = alpm_pkg_get_name(pkg);
+		pkgpair.pkg = pkg;
 		if (!hash_search(hashdb->sync, &pkgpair)) {
 			memlist_ptr = memlist_add(hashdb->pkgpool, &pkgpair);
 			hash_insert(hashdb->aur, memlist_ptr);
+			hashmap_insert(hashdb->pkg_from, (void *) pkgpair.pkgname, &hashdb->pkg_from_aur);
 		}
 	}
 

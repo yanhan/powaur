@@ -32,8 +32,10 @@ enum pwloglevel_t {
 };
 
 enum pkgfrom_t {
+	PKG_FROM_UNKNOWN = 0,
 	PKG_FROM_LOCAL,
-	PKG_FROM_SYNC
+	PKG_FROM_SYNC,
+	PKG_FROM_AUR
 };
 
 enum _pw_errno_t {

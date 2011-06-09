@@ -126,8 +126,8 @@ int download_packages(CURL *curl, alpm_list_t *packages, alpm_list_t **failed_pa
 /* Downloads and extracts a single package.
  * returns 0 on success, -1 on failure.
  */
-static int dl_extract_single_package(CURL *curl, const char *pkgname,
-									 alpm_list_t **failed_packages)
+int dl_extract_single_package(CURL *curl, const char *pkgname,
+							  alpm_list_t **failed_packages)
 {
 	int ret;
 	char filename[PATH_MAX];

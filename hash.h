@@ -1,6 +1,8 @@
 #ifndef POWAUR_HASH_H
 #define POWAUR_HASH_H
 
+#include <alpm.h>
+
 /* Opaque */
 struct hash_table;
 
@@ -41,6 +43,11 @@ int hash_pos(struct hash_table *table, void *data);
 
 /* Walks through the hash table */
 void hash_walk(struct hash_table *table, void (*walk) (void *data));
+
+/* Returns a list of data pointers in the hash table.
+ * This is only valid for HASH_TABLE for now. It will return NULL for other tables
+ */
+alpm_list_t *hash_to_list(struct hash_table *table);
 
 /*******************************************************************************
  *

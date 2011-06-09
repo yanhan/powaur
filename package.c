@@ -310,7 +310,7 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 /* Returns the list of char * of dependencies specified in pkgbuild
  * The list and its contents must be freed by the caller
  */
-static alpm_list_t *grab_dependencies(const char *pkgbuild)
+alpm_list_t *grab_dependencies(const char *pkgbuild)
 {
 	alpm_list_t *ret = NULL;
 	FILE *fp;

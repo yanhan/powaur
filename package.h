@@ -51,6 +51,11 @@ int pkginfo_mod_cmp(const void *a, const void *b);
 
 void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp);
 
+/* Returns the list of char * of dependencies specified in pkgbuild
+ * The list and its contents must be freed by the caller
+ */
+alpm_list_t *grab_dependencies(const char *pkgbuild);
+
 alpm_list_t *resolve_dependencies(alpm_list_t *packages);
 
 /* Returns a statically allocated string indicating wich db the pkg came from */
