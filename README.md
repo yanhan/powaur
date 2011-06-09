@@ -14,7 +14,7 @@ Currently, powaur supports:
 - Colorized output (new in v0.1.3)
 
 Unlike full featured AUR helpers such as clyde, powaur is not meant to
-replace pacman. 
+replace pacman.
 
 
 OBJECTIVES

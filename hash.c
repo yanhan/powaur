@@ -314,7 +314,7 @@ void *hash_search_htable(struct hash_table *htable, void *data)
 {
 	struct hash_table_entry *entry;
 	unsigned long hash = htable->hash(data);
-	
+
 	entry = hash_entry_lookup_htable(hash, htable, data);
 	return entry->u.data ? entry->u.data : NULL;
 }

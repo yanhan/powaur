@@ -54,7 +54,7 @@ int download_single_file(CURL *curl, const char *url, FILE *fp)
 /* Downloads a single tarball from AUR.
  * Assumption: We're already in destination dir.
  *
- * returns 0 on success, -1 on failure. 
+ * returns 0 on success, -1 on failure.
  * Failed package is added to failed_packages list if it's not NULL.
  */
 int download_single_package(CURL *curl, const char *pkgname, alpm_list_t **failed_packages)

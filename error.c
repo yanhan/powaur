@@ -75,7 +75,7 @@ const char *pw_strerror(enum _pw_errno_t err)
 		return "Failed to setup powaur_dir";
 	case PW_ERR_INIT_LOCALDB:
 		return "Failed to initialize local db";
-	
+
 	/* Command parsing errors */
 	case PW_ERR_OP_UNKNOWN:
 		return "Unknown option";
@@ -88,7 +88,7 @@ const char *pw_strerror(enum _pw_errno_t err)
 		return "Error opening /etc/pacman.conf";
 	case PW_ERR_PM_CONF_PARSE:
 		return "Error parsing /etc/pacman.conf";
-	
+
 	/* Fatal errors */
 	case PW_ERR_ACCESS:
 		return "Insufficient permissions to write to directory %s";

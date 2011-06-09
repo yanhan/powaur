@@ -192,7 +192,7 @@ static int parsearg_sync(int option)
 	default:
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -209,7 +209,7 @@ static int parsearg_query(int option)
 	default:
 		return -1;
 	}
-	
+
 	return 0;
 }
 

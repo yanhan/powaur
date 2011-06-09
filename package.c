@@ -184,7 +184,7 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 
 		for (token = strtok_r(line, delim, &saveptr), line = NULL;
 			 token; token = strtok_r(line, delim, &saveptr)) {
-			
+
 			token = strtrim(token);
 
 			/* Remove quotes */

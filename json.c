@@ -51,15 +51,15 @@ alpm_list_t *query_aur(CURL *curl, const char *searchstr, enum aurquery_t query_
 	case AUR_QUERY_SEARCH:
 		snprintf(url, PATH_MAX, AUR_RPC_URL, AUR_RPC_TYPE_SEARCH, searchstr);
 		break;
-	
+
 	case AUR_QUERY_INFO:
 		snprintf(url, PATH_MAX, AUR_RPC_URL, AUR_RPC_TYPE_INFO, searchstr);
 		break;
-	
+
 	case AUR_QUERY_MSEARCH:
 		snprintf(url, PATH_MAX, AUR_RPC_URL, AUR_RPC_TYPE_MSEARCH, searchstr);
 		break;
-	
+
 	default:
 		break;
 	}
@@ -142,7 +142,7 @@ static int json_end_map(void *ctx)
 		parser->pkglist = alpm_list_add(parser->pkglist, parser->curpkg);
 		parser->curpkg = NULL;
 	}
-	
+
 	return 1;
 }
 
