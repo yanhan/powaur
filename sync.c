@@ -375,7 +375,7 @@ static int topo_install(struct pw_hashdb *hashdb, alpm_list_t *targets)
 
 	pw_printf(PW_LOG_INFO, "Upgrading:\n");
 	for (i = targets; i; i = i->next) {
-		printf("%s%s%s\n", color.bred, i->data, color.nocolor);
+		printf("%s%s%s\n", color.bmag, i->data, color.nocolor);
 	}
 
 	for (i = targets; i; i = i->next) {
@@ -400,6 +400,7 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 	int curVertex, cnt = 0;
 	const char *pkgname;
 	enum pkgfrom_t *from = NULL;
+	struct pkgpair pkgpair;
 	alpm_list_t *final_targets = NULL;
 
 	pw_printf(PW_LOG_INFO, "Dependency graph:\n");
@@ -413,18 +414,30 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 		}
 		switch (*from) {
 		case PKG_FROM_LOCAL:
-			pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bblue, pkgname, color.nocolor);
+			pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bgreen, pkgname,
+					  color.nocolor);
 			break;
 		case PKG_FROM_SYNC:
-			pw_printf(PW_LOG_NORM, "%s%s (found in sync)%s", color.byellow, pkgname, color.nocolor);
+			pw_printf(PW_LOG_NORM, "%s%s (found in sync)%s", color.bblue, pkgname,
+					  color.nocolor);
 			break;
 		case PKG_FROM_AUR:
 			/* Magic happens here */
 			if (hash_search(hashdb->aur_outdated, (void *) pkgname)) {
-				pw_printf(PW_LOG_NORM, "%s%s (AUR)%s", color.bred, pkgname, color.nocolor);
+				pw_printf(PW_LOG_NORM, "%s%s (AUR target)%s",
+						  color.bred, pkgname, color.nocolor);
 				final_targets = alpm_list_add(final_targets, (void *) pkgname);
 			} else {
-				pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bblue, pkgname, color.nocolor);
+				pkgpair.pkgname = pkgname;
+				if (hash_search(hashdb->aur, &pkgpair)) {
+					pw_printf(PW_LOG_NORM, "%s%s (installed AUR)%s", color.bblue,
+							  pkgname, color.nocolor);
+				} else {
+					/* New AUR package */
+					pw_printf(PW_LOG_NORM, "%s%s (AUR dep)%s", color.bmag, pkgname,
+							  color.nocolor);
+					final_targets = alpm_list_add(final_targets, (void *) pkgname);
+				}
 			}
 			break;
 		default:
@@ -440,14 +453,14 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 
 /* TODO: Resolve all deps instead of one by one
  * -Su, experimental feature
- * @param targets list of struct aurpkg_t *
+ * @param targets list of strings
+ * @param hashdb hash database
  */
 static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 {
 	alpm_list_t *i;
 	alpm_list_t *target_pkgs = NULL;
 	alpm_list_t *final_targets = NULL;
-	struct aurpkg_t *aurpkg;
 	struct graph *graph;
 	struct stack *topost;
 	int ret = 0;
@@ -461,21 +474,23 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 		return error(PW_ERR_CHDIR);
 	}
 
-	graph = NULL;
+	graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 	topost = stack_new(sizeof(int));
 
 	for (i = targets; i; i = i->next) {
-		aurpkg = i->data;
-		target_pkgs = alpm_list_add(target_pkgs, aurpkg->name);
+		target_pkgs = alpm_list_add(target_pkgs, i->data);
 		/* Insert into outdated AUR packages to avoid dling up to date ones */
-		hash_insert(hashdb->aur_outdated, (void *) aurpkg->name);
+		hash_insert(hashdb->aur_outdated, (void *) i->data);
+		/* Add the targets into graph to prevent those w/o deps to not get upgraded */
+		graph_add_vertex(graph, (void *) i->data);
 	}
 
+	printf("Resolving dependencies... Please wait\n");
 	/* Build dep graph for all packages */
-	build_dep_graph(&graph, hashdb, target_pkgs, GRAPH_NOT_DETAILED, NOFORCE);
+	build_dep_graph(&graph, hashdb, target_pkgs, NOFORCE);
 	ret = graph_toposort(graph, topost);
 	if (ret) {
-		printf("Cyclic dependencies detected in package \"%s\"\n", aurpkg->name);
+		printf("Cyclic dependencies detected!\n");
 		goto cleanup;
 	}
 
@@ -633,7 +648,14 @@ static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 	upgrade_all = yesno("Do you wish to upgrade the above packages?");
 	if (upgrade_all) {
 		/* Experimental */
-		ret = upgrade_pkgs(outdated_pkgs, hashdb);
+		alpm_list_t *final_targets = NULL;
+		struct aurpkg_t *aurpkg;
+		for (i = outdated_pkgs; i; i = i->next) {
+			aurpkg = i->data;
+			final_targets = alpm_list_add(final_targets, aurpkg->name);
+		}
+		ret = upgrade_pkgs(final_targets, hashdb);
+		alpm_list_free(final_targets);
 	}
 
 cleanup:
@@ -656,10 +678,12 @@ static int sync_targets(CURL *curl, alpm_list_t *targets)
 	pmpkg_t *lpkg;
 	alpm_list_t *i;
 	alpm_list_t *reinstall, *new_packages, *upgrade, *downgrade, *not_aur;
-	alpm_list_t *aurpkg_list;
+	alpm_list_t *aurpkg_list, *final_targets;
 	int vercmp;
+	int joined = 0, ret = 0;
 
 	reinstall = new_packages = upgrade = downgrade = aurpkg_list = not_aur = NULL;
+	final_targets = NULL;
 	if (!hashdb) {
 		pw_fprintf(PW_LOG_ERROR, stderr, "Failed to create hashdb\n");
 		goto cleanup;
@@ -724,14 +748,28 @@ free_aurpkg:
 		print_list(new_packages);
 	}
 
+	printf("\n");
+	if (yesno("Do you wish to proceed?")) {
+		final_targets = alpm_list_join(reinstall, upgrade);
+		final_targets = alpm_list_join(final_targets, new_packages);
+		joined = 1;
+		ret = upgrade_pkgs(final_targets, hashdb);
+	}
+
 cleanup:
 	hashdb_free(hashdb);
-	alpm_list_free(reinstall);
-	alpm_list_free(new_packages);
-	alpm_list_free(upgrade);
 	alpm_list_free(downgrade);
 	alpm_list_free(not_aur);
-	return 0;
+
+	if (joined) {
+		alpm_list_free(final_targets);
+	} else {
+		alpm_list_free(reinstall);
+		alpm_list_free(new_packages);
+		alpm_list_free(upgrade);
+	}
+
+	return ret;
 }
 
 /* returns 0 upon success.

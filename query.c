@@ -381,7 +381,7 @@ aur_deps:
 }
 
 void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
-					 alpm_list_t *targets, int detailed, int force)
+					 alpm_list_t *targets, int force)
 {
 	if (!graph) {
 		return;
@@ -430,12 +430,7 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 		for (i = deps; i; i = i->next) {
 			deppkg.pkgname = i->data;
 			deppkg.pkg = NULL;
-
-			/* Continue resolution for detailed */
-			if (detailed == GRAPH_DETAILED) {
-				stack_push(st, &deppkg);
-			}
-
+			stack_push(st, &deppkg);
 			/* dep --> current */
 			graph_add_edge(*graph, i->data, (void *) pkgpair.pkgname);
 		}
@@ -503,7 +498,7 @@ int powaur_crawl(alpm_list_t *targets)
 		stack_reset(topost);
 		graph = NULL;
 		target_pkgs = alpm_list_add(NULL, i->data);
-		build_dep_graph(&graph, hashdb, target_pkgs, GRAPH_DETAILED, FORCE_DL);
+		build_dep_graph(&graph, hashdb, target_pkgs, FORCE_DL);
 		if (have_cycles) {
 			printf("Cyclic dependencies for package \"%s\"\n", i->data);
 		}

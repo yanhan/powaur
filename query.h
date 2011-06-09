@@ -12,12 +12,6 @@ enum aurquery_t {
 	AUR_QUERY_MSEARCH
 };
 
-/* For dep graph purposes */
-enum {
-	GRAPH_NOT_DETAILED = 0,
-	GRAPH_DETAILED
-};
-
 enum {
 	NOFORCE = 0,
 	FORCE_DL
@@ -28,12 +22,11 @@ enum {
  * @param graph if graph is existing, will add on to the graph.
  * @param hashdb hash database
  * @param targets list of strings (packages)
- * @param detailed if given, show detailed dependencies
  * @param force force downloading of AUR packages
  *
  */
 void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
-					 alpm_list_t *targets, int detailed, int force);
+					 alpm_list_t *targets, int force);
 
 /* Prints topological order of graph of strings
  *
