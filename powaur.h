@@ -21,6 +21,7 @@ enum {
 	OPT_MAXTHREADS,
 	OPT_COLOR,
 	OPT_NOCOLOR,
+	OPT_CHECK_ONLY
 };
 
 enum pwloglevel_t {

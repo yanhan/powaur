@@ -189,6 +189,9 @@ static int parsearg_sync(int option)
 	case 'u':
 		config->op_s_upgrade = 1;
 		break;
+	case OPT_CHECK_ONLY:
+		config->op_s_check = 1;
+		break;
 	default:
 		return -1;
 	}
@@ -286,6 +289,7 @@ static int parseargs(int argc, char *argv[])
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
 		{"upgrade", no_argument, NULL, 'u'},
+		{"check", no_argument, NULL, OPT_CHECK_ONLY},
 		{"color", no_argument, NULL, OPT_COLOR},
 		{"crawl", no_argument, NULL, PW_OP_CRAWL},
 		{"debug", no_argument, NULL, OPT_DEBUG},
