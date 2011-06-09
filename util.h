@@ -44,10 +44,10 @@ int wait_or_whine(pid_t pid, char *argv0);
 /* Prints c for rep times */
 void print_repeat(char c, int rep);
 void indent_print(enum pwloglevel_t lvl, alpm_list_t *list, size_t indent);
-void print_list(alpm_list_t *list, const char *prefix);
+void print_list(alpm_list_t *list);
+void print_list_prefix(alpm_list_t *list, const char *prefix);
 void print_list_break(alpm_list_t *list, const char *prefix);
 void print_list_deps(alpm_list_t *list, const char *prefix);
-void print_pkginfo(alpm_list_t *list);
 
 /* Prints a list of aurpkg_t * */
 void print_aurpkg_list(alpm_list_t *list);

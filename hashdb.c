@@ -41,6 +41,10 @@ struct pw_hashdb *hashdb_new(void)
 
 void hashdb_free(struct pw_hashdb *hashdb)
 {
+	if (!hashdb) {
+		return;
+	}
+
 	hash_free(hashdb->local);
 	hash_free(hashdb->sync);
 	hash_free(hashdb->aur);

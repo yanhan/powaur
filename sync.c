@@ -20,166 +20,6 @@
 #include "sync.h"
 #include "util.h"
 
-/* Return a list of struct pkginfo to be freed by caller */
-static alpm_list_t *check_installed(alpm_list_t *targets)
-{
-	alpm_list_t *i, *j, *localdb_cache;
-	alpm_list_t *ret = NULL;
-	pmdb_t *localdb;
-	pmpkg_t *pkg;
-	struct pkginfo_t *info;
-
-	localdb = alpm_option_get_localdb();
-	ASSERT(localdb != NULL, return NULL);
-
-	localdb_cache = alpm_db_get_pkgcache(localdb);
-	for (j = targets; j; j = j->next) {
-		for (i = localdb_cache; i; i = i->next) {
-			pkg = i->data;
-			if (!strcmp(j->data, alpm_pkg_get_name(pkg))) {
-				info = pkginfo_new(alpm_pkg_get_name(pkg),
-								   alpm_pkg_get_version(pkg),
-								   alpm_pkg_get_installdate(pkg));
-
-				ret = alpm_list_add(ret, info);
-				break;
-			}
-		}
-	}
-
-	return ret;
-}
-
-/* Converts a list of char * (pkg names) to a list of struct pkginfo_t *
- */
-static alpm_list_t *char_to_pkginfo(alpm_list_t *list)
-{
-	alpm_list_t *i, *k, *ret = NULL;
-	pmdb_t *localdb;
-	pmpkg_t *pkg;
-	struct pkginfo_t *pkginfo;
-
-	localdb = alpm_option_get_localdb();
-	ASSERT(localdb != NULL, RET_ERR(PW_ERR_LOCALDB_NULL, NULL));
-
-	for (i = list; i; i = i->next) {
-		for (k = alpm_db_get_pkgcache(localdb); k; k = k->next) {
-			pkg = k->data;
-			if (!strcmp(i->data, alpm_pkg_get_name(pkg))) {
-				pkginfo = pkginfo_new(i->data, alpm_pkg_get_version(pkg),
-									  alpm_pkg_get_installdate(pkg));
-
-				ret = alpm_list_add(ret, pkginfo);
-				pkginfo = NULL;
-			}
-		}
-	}
-
-	return ret;
-}
-
-/* Saves install results in *success and *failure.
- * Returns a list of alpm_list_t * of struct pkginfo_t * to be freed by caller.
- *
- * This is an extremely ugly function.
- *
- * @param universe list of char * (pkg names)
- * @param org_installed SORTED list of struct pkginfo_t * sorted by name
- * @param nonzero_install SORTED list of char * that may be successfully installed
- * @param success pointer to list that will store successful pkgs
- * @param failure pointer to list that will store failed pkgs
- */
-static alpm_list_t *get_install_results(alpm_list_t *universe, alpm_list_t *org_installed,
-							   alpm_list_t *nonzero_install,
-							   alpm_list_t **success, alpm_list_t **failure)
-{
-	/* success = (nonzero_install AND not(org_installed)) +
-	 * 			 (nonzero_install AND org_installed AND install_date changed)
-	 *
-	 * failure = universe - success - org_installed
-	 */
-
-	alpm_list_t *i, *k;
-	alpm_list_t *targets, *newly_installed, *updated_pkg, *tmp_failure;
-	alpm_list_t *freelist, *new_universe;
-
-	struct pkginfo_t *pkginfo;
-	pmdb_t *localdb;
-	pmpkg_t *pkg;
-
-	new_universe = freelist = NULL;
-	tmp_failure = targets = newly_installed = updated_pkg = NULL;
-
-	/* ALERT: reload libalpm!!!
-	 * This is just a hack to get around us having a not updated localdb
-	 * even though packages may have been installed.
-	 *
-	 * So much just to display what packages have been successfully installed
-	 * and stuff. I regret doing this but I wrote too much code and spent too
-	 * much time on this to just give everything up.
-	 */
-	if (alpm_reload()) {
-		RET_ERR(PW_ERR_ALPM_RELOAD, NULL);
-	}
-
-	/* Convert the important lists to pkginfo structs */
-	targets = char_to_pkginfo(nonzero_install);
-
-	new_universe = char_to_pkginfo(universe);
-	new_universe = alpm_list_msort(new_universe, alpm_list_count(new_universe),
-								   (alpm_list_fn_cmp) pkginfo_name_cmp);
-
-	/* Get those in targets but not in org_installed */
-	alpm_list_diff_sorted(targets, org_installed, pkginfo_name_cmp,
-						  &newly_installed, NULL);
-
-	pw_printf(PW_LOG_DEBUG, "New Packages installed by us:\n");
-	if (!newly_installed) {
-		pw_printf(PW_LOG_DEBUG, "None\n");
-	} else if (config->loglvl & PW_LOG_DEBUG) {
-		for (i = targets; i; i = i->next) {
-			pw_printf(PW_LOG_DEBUG, "%s\n", ((struct pkginfo_t *)i->data)->name);
-		}
-
-		printf("\n");
-	}
-
-	/* Get those in targets and org_installed with install date
-	 * modified */
-	updated_pkg = list_intersect(targets, org_installed, pkginfo_mod_cmp);
-
-	pw_printf(PW_LOG_DEBUG, "Reinstalled packages / Updated packages:\n");
-	if (!updated_pkg) {
-		pw_printf(PW_LOG_DEBUG, "None\n");
-	} else if (config->loglvl & PW_LOG_DEBUG) {
-		for (i = updated_pkg; i; i = i->next) {
-			pw_printf(PW_LOG_DEBUG, "Install date modified = %s\n",
-					  ((struct pkginfo_t *)i->data)->name);
-		}
-
-		printf("\n");
-	}
-
-	/* Join the 2 lists */
-	if (success) {
-		*success = alpm_list_join(newly_installed, updated_pkg);
-	}
-
-	/* Find the list of failures.
-	 * failure = universe - success - org_installed
-	 */
-	if (failure) {
-		tmp_failure = list_diff(new_universe, *success, pkginfo_name_cmp);
-		*failure = list_diff(tmp_failure, org_installed, pkginfo_name_cmp);
-	}
-
-	alpm_list_free(tmp_failure);
-
-	freelist = alpm_list_add(freelist, targets);
-	freelist = alpm_list_add(freelist, new_universe);
-	return freelist;
-}
-
 /* Installs a single succesfully downloaded PKGBUILD using makepkg -si
  * Assumes that the package has been extracted into its own directory
  *
@@ -489,12 +329,12 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 
 		printf("%s\n", color.nocolor);
 
-		print_list(pkg->provides, PROVIDES);
-		print_list(pkg->depends, DEPS);
-		print_list(pkg->optdepends, OPTDEPS);
-		print_list(pkg->conflicts, CONFLICTS);
-		print_list(pkg->replaces, REPLACES);
-		print_list(pkg->arch, ARCH);
+		print_list_prefix(pkg->provides, PROVIDES);
+		print_list_prefix(pkg->depends, DEPS);
+		print_list_prefix(pkg->optdepends, OPTDEPS);
+		print_list_prefix(pkg->conflicts, CONFLICTS);
+		print_list_prefix(pkg->replaces, REPLACES);
+		print_list_prefix(pkg->arch, ARCH);
 
 		printf("%s%s%s %s\n", color.bold, DESC, color.nocolor, pkg->desc);
 
@@ -658,7 +498,7 @@ cleanup:
 	return ret;
 }
 
-/* Returns a list of outdated AUR packages.
+/* Returns a list of outdated AUR packages among targets or all AUR packages.
  * The list and the packages are to be freed by the caller.
  *
  * @param curl curl easy handle
@@ -804,23 +644,106 @@ cleanup:
 	return ret;
 }
 
+/* Normal -S, install packages from AUR
+ * returns 0 on success, -1 on failure
+ */
+static int sync_targets(CURL *curl, alpm_list_t *targets)
+{
+	struct pw_hashdb *hashdb = build_hashdb();
+	struct pkgpair pkgpair;
+	struct pkgpair *pkgpair_ptr;
+	struct aurpkg_t *aurpkg;
+	pmpkg_t *lpkg;
+	alpm_list_t *i;
+	alpm_list_t *reinstall, *new_packages, *upgrade, *downgrade, *not_aur;
+	alpm_list_t *aurpkg_list;
+	int vercmp;
+
+	reinstall = new_packages = upgrade = downgrade = aurpkg_list = not_aur = NULL;
+	if (!hashdb) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "Failed to create hashdb\n");
+		goto cleanup;
+	}
+
+	for (i = targets; i; i = i->next) {
+		aurpkg_list = query_aur(curl, i->data, AUR_QUERY_INFO);
+		if (!aurpkg_list) {
+			not_aur = alpm_list_add(not_aur, i->data);
+			goto free_aurpkg;
+		}
+
+		/* Check version string */
+		pkgpair.pkgname = i->data;
+		pkgpair_ptr = hash_search(hashdb->aur, &pkgpair);
+
+		/* Locally installed AUR */
+		if (pkgpair_ptr) {
+			aurpkg = aurpkg_list->data;
+			lpkg = pkgpair_ptr->pkg;
+			vercmp = alpm_pkg_vercmp(aurpkg->version, alpm_pkg_get_version(lpkg));
+
+			if (vercmp > 0) {
+				upgrade = alpm_list_add(upgrade, i->data);
+			} else if (vercmp == 0) {
+				reinstall = alpm_list_add(reinstall, i->data);
+			} else {
+				downgrade = alpm_list_add(downgrade, i->data);
+			}
+		} else {
+			new_packages = alpm_list_add(new_packages, i->data);
+		}
+
+free_aurpkg:
+		alpm_list_free_inner(aurpkg_list, (alpm_list_fn_free) aurpkg_free);
+		alpm_list_free(aurpkg_list);
+	}
+
+	if (not_aur) {
+		printf("\n%sThese packages are not from the AUR:%s\n", color.bred, color.nocolor);
+		print_list(not_aur);
+	}
+
+	if (downgrade) {
+		printf("\n%sLocally installed but newer than AUR, ignoring:%s\n",
+			   color.cyan, color.nocolor);
+		print_list(downgrade);
+	}
+
+	if (reinstall) {
+		printf("\n%sReinstalling:%s\n", color.byellow, color.nocolor);
+		print_list(reinstall);
+	}
+
+	if (upgrade) {
+		printf("\n%sUpgrading:%s\n", color.bblue, color.nocolor);
+		print_list(upgrade);
+	}
+
+	if (new_packages) {
+		printf("\n%sSyncing:%s\n", color.bmag, color.nocolor);
+		print_list(new_packages);
+	}
+
+cleanup:
+	hashdb_free(hashdb);
+	alpm_list_free(reinstall);
+	alpm_list_free(new_packages);
+	alpm_list_free(upgrade);
+	alpm_list_free(downgrade);
+	alpm_list_free(not_aur);
+	return 0;
+}
+
 /* returns 0 upon success.
  * returns -1 upon failure to change dir / download PKGBUILD / install package
  */
 int powaur_sync(alpm_list_t *targets)
 {
 	alpm_list_t *i;
-	alpm_list_t *freelist;
-	alpm_list_t *org_installed, *dl_failed, *final_targets;
-	alpm_list_t *nonzero_install, *success, *failure;
-	pmdb_t *localdb;
 	int ret, status;
 	char orgdir[PATH_MAX];
 	CURL *curl;
 
-	freelist = NULL;
-	nonzero_install = org_installed = dl_failed = final_targets = NULL;
-	success = failure = NULL;
 	ret = status = 0;
 
 	curl = curl_easy_new();
@@ -879,79 +802,16 @@ int powaur_sync(alpm_list_t *targets)
 		goto cleanup;
 	}
 
-	alpm_list_t *iptr;
-	struct pkginfo_t *pkginfo;
-	org_installed = check_installed(targets);
-	org_installed = alpm_list_msort(org_installed, alpm_list_count(org_installed),
-									pkginfo_name_cmp);
-
-	/* Check */
-	for (iptr = org_installed; iptr; iptr = iptr->next) {
-		pkginfo = iptr->data;
-		pw_printf(PW_LOG_DEBUG, "Originally installed: %s %s\n",
-				  pkginfo->name, pkginfo->version);
-	}
-
-	/* DL the packages, get the working ones and install them */
-	download_packages(curl, targets, &dl_failed);
-	if (pwerrno == PW_ERR_ACCESS) {
-		goto cleanup;
-	}
-
-	final_targets = list_diff(targets, dl_failed, (alpm_list_fn_cmp) strcmp);
-
-	ret = install_packages(final_targets, &nonzero_install);
-
-	nonzero_install = alpm_list_msort(nonzero_install,
-									  alpm_list_count(nonzero_install),
-									  (alpm_list_fn_cmp) strcmp);
-
-	freelist = get_install_results(targets, org_installed, nonzero_install,
-						&success, &failure);
-
-	if (org_installed) {
-		printf("\n");
-		pw_printf(PW_LOG_INFO, "These packages were originally installed:\n");
-		print_pkginfo(org_installed);
-	}
-
-	if (success) {
-		printf("\n");
-		pw_printf(PW_LOG_INFO,
-				  "The following packages were successfully installed\n");
-		print_pkginfo(success);
-	}
-
-	if (failure) {
-		printf("\n");
-		pw_printf(PW_LOG_WARNING, "The following packages were not installed:\n");
-		print_pkginfo(failure);
-	}
+	/* -S */
+	ret = sync_targets(curl, targets);
 
 cleanup:
 	if (chdir(orgdir)) {
-		PW_SETERRNO(PW_ERR_RESTORECWD);
+		ret = error(PW_ERR_RESTORECWD);
 	}
-
-	alpm_list_free_inner(org_installed, (alpm_list_fn_free) pkginfo_free_all);
-	alpm_list_free(org_installed);
-
-	alpm_list_free(dl_failed);
-	alpm_list_free(final_targets);
-	alpm_list_free(nonzero_install);
-
-	for (i = freelist; i; i = i->next) {
-		alpm_list_free_inner(i->data, (alpm_list_fn_free) pkginfo_free_all);
-		alpm_list_free(i->data);
-	}
-
-	alpm_list_free(freelist);
-	alpm_list_free(success);
-	alpm_list_free(failure);
 
 final_cleanup:
 	curl_easy_cleanup(curl);
-
 	return ret ? -1 : 0;
 }
 

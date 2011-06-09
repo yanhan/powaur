@@ -340,7 +340,39 @@ void indent_print(enum pwloglevel_t lvl, alpm_list_t *list, size_t indent)
 	}
 }
 
-void print_list(alpm_list_t *list, const char *prefix)
+void print_list(alpm_list_t *list)
+{
+	alpm_list_t *i;
+	size_t curcols, newlen;
+	size_t cols = getcols();
+	if (!list) {
+		printf("None\n");
+		return;
+	}
+
+	curcols = 0;
+	for (i = list; i; i = i->next) {
+		/* There's a bug here which I'm not gonna fix. */
+		newlen = curcols + 2 + strlen(i->data);
+		if (newlen > cols) {
+			printf("\n");
+			curcols = 0;
+		}
+
+		if (curcols == 0) {
+			printf("%s", i->data);
+			curcols += strlen(i->data);
+			continue;
+		}
+
+		curcols = newlen;
+		printf("  %s", i->data);
+	}
+
+	printf("\n");
+}
+
+void print_list_prefix(alpm_list_t *list, const char *prefix)
 {
 	alpm_list_t *i;
 	size_t len = strlen(prefix);
@@ -376,6 +408,25 @@ void print_list(alpm_list_t *list, const char *prefix)
 	}
 
 	printf("\n");
+}
+
+void print_list_break(alpm_list_t *list, const char *prefix)
+{
+	alpm_list_t *i;
+	size_t indent;
+
+	printf("%s%s%s ", color.bold, prefix, color.nocolor);
+	if (!list) {
+		printf("None\n");
+		return;
+	}
+
+	printf("%s\n", list->data);
+
+	indent = strlen(prefix) + 1;
+	for (i = list->next; i; i = i->next) {
+		printf("%*s%s\n", indent, "", i->data);
+	}
 }
 
 /* Print dependencies */
@@ -426,25 +477,6 @@ void print_list_deps(alpm_list_t *list, const char *prefix)
 	printf("\n");
 }
 
-void print_list_break(alpm_list_t *list, const char *prefix)
-{
-	alpm_list_t *i;
-	size_t indent;
-
-	printf("%s%s%s ", color.bold, prefix, color.nocolor);
-	if (!list) {
-		printf("None\n");
-		return;
-	}
-
-	printf("%s\n", list->data);
-
-	indent = strlen(prefix) + 1;
-	for (i = list->next; i; i = i->next) {
-		printf("%*s%s\n", indent, "", i->data);
-	}
-}
-
 /* Question which requires a y/n answer.
  * returns 0 for n, 1 for y
  */
@@ -489,40 +521,6 @@ static int question(int preset, const char *fmt, va_list args)
 		}
 
 	} while (1);
-}
-
-/* Prints list of struct pkginfo_t * */
-void print_pkginfo(alpm_list_t *list)
-{
-	alpm_list_t *i;
-	size_t cols, curcols, newlen;
-	size_t namelen, verlen;
-	struct pkginfo_t *pkginfo;
-
-	cols = getcols();
-	curcols = 0;
-
-	for (i = list; i; i = i->next) {
-		pkginfo = i->data;
-		namelen = strlen(pkginfo->name);
-		verlen = strlen(pkginfo->version);
-
-		newlen = curcols + 2 + namelen + verlen;
-		if (newlen > cols) {
-			printf("\n");
-			curcols = 0;
-		}
-
-		if (curcols == 0) {
-			printf("%s %s", pkginfo->name, pkginfo->version);
-			curcols = namelen + verlen;
-		} else {
-			printf("  %s %s", pkginfo->name, pkginfo->version);
-			curcols = newlen;
-		}
-	}
-
-	printf("\n");
 }
 
 void print_aurpkg_list(alpm_list_t *list)

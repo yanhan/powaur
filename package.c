@@ -669,20 +669,20 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 	printf("%s%s %s%s%s\n", color.bold, URL, color.bcyan,
 		   alpm_pkg_get_url(pkg), color.nocolor);
 
-	print_list(alpm_pkg_get_licenses(pkg), LICENSES);
-	print_list(alpm_pkg_get_groups(pkg), GROUPS);
-	print_list(alpm_pkg_get_provides(pkg), PROVIDES);
+	print_list_prefix(alpm_pkg_get_licenses(pkg), LICENSES);
+	print_list_prefix(alpm_pkg_get_groups(pkg), GROUPS);
+	print_list_prefix(alpm_pkg_get_provides(pkg), PROVIDES);
 
 	print_list_deps(alpm_pkg_get_depends(pkg), DEPS);
 	print_list_break(alpm_pkg_get_optdepends(pkg), OPTDEPS);
 
 	if (from == PKG_FROM_LOCAL) {
 		results = alpm_pkg_compute_requiredby(pkg);
-		print_list(results, REQBY);
+		print_list_prefix(results, REQBY);
 	}
 
-	print_list(alpm_pkg_get_conflicts(pkg), CONFLICTS);
-	print_list(alpm_pkg_get_replaces(pkg), REPLACES);
+	print_list_prefix(alpm_pkg_get_conflicts(pkg), CONFLICTS);
+	print_list_prefix(alpm_pkg_get_replaces(pkg), REPLACES);
 
 	if (from == PKG_FROM_SYNC) {
 		humanize_size(alpm_pkg_get_size(pkg), DLSZ);
