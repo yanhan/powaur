@@ -474,14 +474,14 @@ void print_topo_order(struct graph *graph, struct stack *topost)
 	printf("\n");
 }
 
-/* TODO: Remove. For walking hash table */
+/* For walking hash table */
 void pkg_walk(void *pkg)
 {
 	struct pkgpair *pkgpair = pkg;
 	printf("pkg = %s\n", pkgpair->pkgname);
 }
 
-/* TODO: Remove. For walking hash map */
+/* For walking hash map */
 void provides_walk(void *key, void *val)
 {
 	printf("%s is provided by %s\n", key, val);
@@ -489,10 +489,20 @@ void provides_walk(void *key, void *val)
 
 int powaur_crawl(alpm_list_t *targets)
 {
+	int ret = 0;
+	char cwd[PATH_MAX];
+	if (!getcwd(cwd, PATH_MAX)) {
+		return error(PW_ERR_GETCWD);
+	}
+
+	if (chdir(powaur_dir)) {
+		return error(PW_ERR_CHDIR, powaur_dir);
+	}
+
 	struct pw_hashdb *hashdb = build_hashdb();
 	if (!hashdb) {
 		pw_fprintf(PW_LOG_ERROR, stderr, "Unable to build hash database!\n");
-		return -1;
+		ret = -1;
 	}
 
 	alpm_list_t *i, *target_pkgs;
@@ -523,5 +533,9 @@ int powaur_crawl(alpm_list_t *targets)
 
 	stack_free(topost);
 	hashdb_free(hashdb);
-	return 0;
+
+	if (chdir(cwd)) {
+		return error(PW_ERR_RESTORECWD);
+	}
+	return ret;
 }
