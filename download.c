@@ -57,7 +57,8 @@ int download_single_file(CURL *curl, const char *url, FILE *fp)
  * returns 0 on success, -1 on failure.
  * Failed package is added to failed_packages list if it's not NULL.
  */
-int download_single_package(CURL *curl, const char *pkgname, alpm_list_t **failed_packages)
+int download_single_package(CURL *curl, const char *pkgname,
+							alpm_list_t **failed_packages, int verbose)
 {
 	int ret = 0;
 	FILE *fp = NULL;
@@ -92,7 +93,7 @@ int download_single_package(CURL *curl, const char *pkgname, alpm_list_t **faile
 cleanup:
 	fclose(fp);
 
-	if (!ret) {
+	if (!ret && verbose) {
 		pw_printf(PW_LOG_INFO, "Downloaded %s\n", filename);
 	}
 
@@ -111,7 +112,7 @@ int download_packages(CURL *curl, alpm_list_t *packages, alpm_list_t **failed_pa
 
 	CLEAR_ERRNO();
 	for (i = packages; i; i = i->next) {
-		status = download_single_package(curl, (char *) i->data, failed_packages);
+		status = download_single_package(curl, (char *) i->data, failed_packages, 1);
 
 		if (pwerrno == PW_ERR_ACCESS) {
 			return -1;
@@ -127,13 +128,13 @@ int download_packages(CURL *curl, alpm_list_t *packages, alpm_list_t **failed_pa
  * returns 0 on success, -1 on failure.
  */
 int dl_extract_single_package(CURL *curl, const char *pkgname,
-							  alpm_list_t **failed_packages)
+							  alpm_list_t **failed_packages, int verbose)
 {
 	int ret;
 	char filename[PATH_MAX];
 
 	snprintf(filename, PATH_MAX, "%s.tar.gz", pkgname);
-	ret = download_single_package(curl, pkgname, failed_packages);
+	ret = download_single_package(curl, pkgname, failed_packages, verbose);
 
 	if (ret) {
 		unlink(filename);
@@ -165,7 +166,7 @@ static void *thread_dl_extract(void *useless)
 			break;
 		}
 
-		ret = dl_extract_single_package(curl, pkg, NULL);
+		ret = dl_extract_single_package(curl, pkg, NULL, 1);
 		if (ret) {
 			break;
 		}

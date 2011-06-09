@@ -248,7 +248,7 @@ search_aur:
 	}
 
 	/* Download and extract from AUR */
-	if (dl_extract_single_package(curl, pkgname, NULL)) {
+	if (dl_extract_single_package(curl, pkgname, NULL, 0)) {
 		return NULL;
 	}
 
@@ -315,7 +315,6 @@ get_deps:
 		die("Unable to find package \"%s\" in local/sync db!", final_pkgname);
 	}
 
-	/* pkg is in local/sync, return its deps */
 	depmod_list = alpm_pkg_get_depends(pkgpair->pkg);
 	for (i = depmod_list; i; i = i->next) {
 		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data), force);
