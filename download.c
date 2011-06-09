@@ -8,6 +8,7 @@
 #include "download.h"
 #include "error.h"
 #include "environment.h"
+#include "hashdb.h"
 #include "powaur.h"
 #include "util.h"
 #include "wrapper.h"
@@ -262,11 +263,17 @@ int powaur_get(alpm_list_t *targets)
 	}
 
 	/* Threaded downloading w/ dependency resolution */
+	struct pw_hashdb *hashdb = build_hashdb();
+	if (!hashdb) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "Failed to build hash database!\n");
+		errors++;
+		goto cleanup;
+	}
 	resolve = alpm_list_strdup(targets);
 
 	while (resolve) {
 		threadpool_dl_extract(resolve);
-		new_resolve = resolve_dependencies(resolve);
+		new_resolve = resolve_dependencies(hashdb, resolve);
 		FREELIST(resolve);
 		resolve = new_resolve;
 
@@ -278,6 +285,8 @@ int powaur_get(alpm_list_t *targets)
 			pw_printf(PW_LOG_DEBUG, "\n");
 		}
 	}
+
+	hashdb_free(hashdb);
 
 cleanup:
 	alpm_list_free(failed_packages);

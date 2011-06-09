@@ -8,6 +8,7 @@
 #include <alpm.h>
 
 #include "environment.h"
+#include "hashdb.h"
 #include "package.h"
 #include "powaur.h"
 #include "util.h"
@@ -345,44 +346,22 @@ alpm_list_t *grab_dependencies(const char *pkgbuild)
 	return ret;
 }
 
-/* Resolve dependencies for powaur_get
- * Basically, we just look through each of the PKGBUILD files, grab
- * the list of new dependencies, check if they're installed or in the
- * current directory.
- *
- * returns the list of unresolved dependencies.
- */
-alpm_list_t *resolve_dependencies(alpm_list_t *packages)
+alpm_list_t *resolve_dependencies(struct pw_hashdb *hashdb, alpm_list_t *packages)
 {
 	alpm_list_t *i, *k, *m, *q;
-	alpm_list_t *deps, *newdeps, *dbcache;
-	alpm_list_t *syncdb_caches = NULL;
+	alpm_list_t *deps, *newdeps;
 
-	pmdb_t *localdb;
 	pmpkg_t *pkg;
+	struct pkgpair pkgpair;
+	struct pkgpair *pkgpair_ptr;
 	char pkgbuild[PATH_MAX];
-	int found = 0;
 	struct stat st;
 
-	localdb = alpm_option_get_localdb();
-	if (!localdb) {
-		error(PW_ERR_LOCALDB_NULL);
-		return NULL;
-	}
-
 	newdeps = NULL;
-	dbcache = alpm_db_get_pkgcache(localdb);
-
-	for (i = alpm_option_get_syncdbs(); i; i = i->next) {
-		syncdb_caches = alpm_list_add(syncdb_caches,
-									  alpm_db_get_pkgcache((pmdb_t *) i->data));
-	}
-
 	for (i = packages; i; i = i->next) {
 		snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", i->data);
 		/* Grab the list of new dependencies from PKGBUILD */
 		deps = grab_dependencies(pkgbuild);
-
 		if (!deps) {
 			continue;
 		}
@@ -392,7 +371,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 		}
 
 		for (k = deps; k; k = k->next) {
-			found = 0;
+			pkgpair.pkgname = k->data;
 
 			/* Check against newdeps */
 			if (alpm_list_find_str(newdeps, k->data)) {
@@ -400,15 +379,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			}
 
 			/* Check against localdb */
-			for (m = dbcache; m; m = m->next) {
-				pkg = m->data;
-				if (!strcmp(k->data, alpm_pkg_get_name(pkg))) {
-					found = 1;
-					break;
-				}
-			}
-
-			if (found) {
+			if (hash_search(hashdb->local, &pkgpair)) {
 				if (config->verbose) {
 					printf("%s%s - Already installed\n", TAB, k->data);
 				}
@@ -417,22 +388,32 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			}
 
 			/* Check against sync dbs */
-			for (m = syncdb_caches; m && !found; m = m->next) {
-				for (q = m->data; q; q = q->next) {
-					pkg = q->data;
-					if (!strcmp(k->data, alpm_pkg_get_name(pkg))) {
-						found = 1;
-						break;
-					}
-				}
-			}
-
-			if (found) {
+			pkgpair_ptr = hash_search(hashdb->sync, &pkgpair);
+			if (pkgpair_ptr) {
 				if (config->verbose) {
 					printf("%s%s can be found in %s repo\n", TAB, k->data,
-						   alpm_db_get_name(alpm_pkg_get_db(pkg)));
+						   alpm_db_get_name(alpm_pkg_get_db(pkgpair_ptr->pkg)));
 				}
 
+				continue;
+			}
+
+			/* Check against provides */
+			pkgpair_ptr = hashbst_tree_search(hashdb->local_provides, k->data,
+											  hashdb->local, provides_search);
+			if (pkgpair_ptr) {
+				if (config->verbose) {
+					printf("%s%s is provided by %s\n", TAB, k->data, pkgpair_ptr->pkgname);
+				}
+				continue;
+			}
+
+			pkgpair_ptr = hashbst_tree_search(hashdb->sync_provides, k->data,
+											  hashdb->sync, provides_search);
+			if (pkgpair_ptr) {
+				if (config->verbose) {
+					printf("%s%s is provided by %s\n", TAB, k->data, pkgpair_ptr->pkgname);
+				}
 				continue;
 			}
 
@@ -440,7 +421,7 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 			snprintf(pkgbuild, PATH_MAX, "%s/PKGBUILD", k->data);
 			if (!stat(pkgbuild, &st)) {
 				if (config->verbose) {
-					printf("%s%s is present in current directory\n", TAB, k->data);
+					printf("%s%s has been downloaded\n", TAB, k->data);
 				}
 
 				continue;
@@ -457,7 +438,6 @@ alpm_list_t *resolve_dependencies(alpm_list_t *packages)
 		FREELIST(deps);
 	}
 
-	alpm_list_free(syncdb_caches);
 	return newdeps;
 }
 

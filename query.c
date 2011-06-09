@@ -210,7 +210,12 @@ static const char *normalize_package(CURL *curl, struct pw_hashdb *hashdb,
 		return pkgptr->pkgname;
 	}
 
-	/* Search sync provides tree in local db */
+	/* Search sync provides tree in local db
+	 * TODO: Is there a meaning to this?
+	 * local provides are obtained from local packages.
+	 * sync provides are obtained from sync packages.
+	 * So searching for sync provides in local database is kind of...
+	 */
 	pkgptr = hashbst_tree_search(hashdb->sync_provides, (void *) pkgname,
 								 hashdb->local, provides_search);
 

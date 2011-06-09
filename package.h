@@ -2,9 +2,9 @@
 #define POWAUR_PACKAGE_H
 
 #include <stdio.h>
-
 #include <alpm.h>
 
+#include "hashdb.h"
 #include "powaur.h"
 
 struct aurpkg_t {
@@ -56,7 +56,11 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp);
  */
 alpm_list_t *grab_dependencies(const char *pkgbuild);
 
-alpm_list_t *resolve_dependencies(alpm_list_t *packages);
+/* Resolve dependencies for powaur_get
+ * returns the list of strings of unresolved packages. The list and strings
+ * are to be freed by the caller.
+ */
+alpm_list_t *resolve_dependencies(struct pw_hashdb *hashdb, alpm_list_t *packages);
 
 /* Returns a statically allocated string indicating wich db the pkg came from */
 const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp);
