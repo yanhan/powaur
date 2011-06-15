@@ -503,19 +503,6 @@ void print_topo_order(struct graph *graph, struct stack *topost)
 	printf("\n");
 }
 
-/* For walking hash table */
-void pkg_walk(void *pkg)
-{
-	struct pkgpair *pkgpair = pkg;
-	printf("pkg = %s\n", pkgpair->pkgname);
-}
-
-/* For walking hash map */
-void provides_walk(void *key, void *val)
-{
-	printf("%s is provided by %s\n", key, val);
-}
-
 int powaur_crawl(alpm_list_t *targets)
 {
 	int ret = 0;

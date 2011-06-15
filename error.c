@@ -20,15 +20,6 @@ int error(enum _pw_errno_t err, ...)
 	return -1;
 }
 
-int error_report(const char *msg, ...)
-{
-	va_list ap;
-	va_start(ap, msg);
-	pw_vfprintf(PW_LOG_ERROR, stderr, msg, ap);
-	va_end(ap);
-	return -1;
-}
-
 void die(const char *msg, ...)
 {
 	char buf[PATH_MAX];

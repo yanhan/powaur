@@ -132,46 +132,6 @@ fork_pacman:
 	return 0;
 }
 
-
-/* Installs a list of successfully downloadaded targets using makepkg -si
- * returns -2 on abort, else returns -1 on error, 0 on success
- *
- * Packages that installed successfully are added to success
- */
-static int install_packages(alpm_list_t *targets, alpm_list_t **success)
-{
-	alpm_list_t *i;
-	int ret, status;
-	char buf[PATH_MAX];
-
-	ret = status = 0;
-	for (i = targets; i; i = i->next) {
-		fflush(stdout);
-		fprintf(stderr, "\n");
-		pw_fprintf(PW_LOG_WARNING, stderr,
-				   "Installing unsupported package %s\n         "
-				   "You are advised to look through the PKGBUILD.\n", i->data);
-
-
-		snprintf(buf, PATH_MAX, "%s.tar.gz", i->data);
-		if (extract_file(buf)) {
-			pw_fprintf(PW_LOG_ERROR, stderr, "Unable to extract package \"%s\"", i->data);
-			continue;
-		}
-
-		status = install_single_package((char *) i->data);
-		if (status == -2) {
-			return -2;
-		} else if (status == -1) {
-			ret = -1;
-		} else {
-			*success = alpm_list_add(*success, i->data);
-		}
-	}
-
-	return ret;
-}
-
 /* Search sync db for packages. Only works for 1 package now. */
 static int sync_search(CURL *curl, alpm_list_t *targets)
 {

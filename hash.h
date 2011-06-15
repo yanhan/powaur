@@ -41,9 +41,6 @@ void *hash_search(struct hash_table *table, void *data);
  * returns index of data if found, returns -1 if not found */
 int hash_pos(struct hash_table *table, void *data);
 
-/* Walks through the hash table */
-void hash_walk(struct hash_table *table, void (*walk) (void *data));
-
 /* Returns a list of data pointers in the hash table.
  * This is only valid for HASH_TABLE for now. It will return NULL for other tables
  */
@@ -75,7 +72,6 @@ void hashbst_insert(struct hashbst *hbst, void *key, void *val);
  * @param fn function to use in search walking
  */
 void *hashbst_tree_search(struct hashbst *hbst, void *key, void *search, hbst_search_fn fn);
-void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val));
 
 /*******************************************************************************
  *
@@ -96,6 +92,5 @@ void hashmap_insert(struct hashmap *hmap, void *key, void *val);
  * @param key key to search for
  */
 void *hashmap_search(struct hashmap *hmap, void *key);
-void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val));
 
 #endif

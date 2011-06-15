@@ -127,6 +127,5 @@ extern alpm_list_t *pacman_cachedirs;
 
 int setup_environment(void);
 void cleanup_environment(void);
-int alpm_reload(void);
 
 #endif

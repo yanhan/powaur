@@ -560,25 +560,6 @@ static void hashbst_bst_free(struct hashbst_tree *bst)
 	hashbst_tree_node_free(bst->root);
 }
 
-/* TODO: Remove */
-static void hashbst_tree_node_walk(struct hashbst_tree_node *node, void *key, void (*walk) (void *key, void *val))
-{
-	if (!node) {
-		return;
-	}
-
-	/* Recursion */
-	hashbst_tree_node_walk(node->left, key, walk);
-	walk(key, node->val);
-	hashbst_tree_node_walk(node->right, key, walk);
-}
-
-/* TODO: Remove */
-static void hashbst_bst_walk(struct hashbst_tree *bst, void (*walk) (void *key, void *val))
-{
-	hashbst_tree_node_walk(bst->root, bst->key, walk);
-}
-
 /*******************************************************************************
  *
  * Hash BST - Wrapper over HASH_BST hash tables
@@ -794,33 +775,6 @@ int hash_pos_bst(struct hash_table *htable, void *data)
 	return -1;
 }
 
-/* TODO: Remove */
-#include <stdio.h>
-void hash_walk(struct hash_table *htable, void (*walk) (void *data))
-{
-	unsigned int i;
-	struct hash_table_entry *array = htable->table;
-	for (i = 0; i < htable->sz; ++i) {
-		if (array[i].u.data) {
-			printf("pos = %u, ", i);
-			walk(array[i].u.data);
-		}
-	}
-}
-
-/* TODO: Remove */
-void hashbst_walk(struct hashbst *hbst, void (*walk) (void *key, void *val))
-{
-	unsigned int i;
-	struct hash_table_entry *array = hbst->htable->table;
-	for (i = 0; i < hbst->htable->sz; ++i) {
-		if (array[i].u.tree.root) {
-			printf("pos %u:\n", i);
-			hashbst_bst_walk(&array[i].u.tree, walk);
-		}
-	}
-}
-
 /*******************************************************************************
  *
  * HASH_MAP
@@ -1002,17 +956,4 @@ void hashmap_insert(struct hashmap *hmap, void *key, void *val)
 void *hashmap_search(struct hashmap *hmap, void *key)
 {
 	return hash_search(hmap->htable, key);
-}
-
-void hashmap_walk(struct hashmap *hmap, void (*walk) (void *key, void *val))
-{
-	struct hash_table_entry *array = hmap->htable->table;
-	unsigned int i;
-
-	for (i = 0; i < hmap->htable->sz; ++i) {
-		if (array[i].u.pair.key) {
-			printf("pos %u: ", i);
-			walk(array[i].u.pair.key, array[i].u.pair.val);
-		}
-	}
 }

@@ -259,20 +259,3 @@ void cleanup_environment(void)
 	free(pacman_rootdir);
 	free(pacman_dbpath);
 }
-
-int alpm_reload(void)
-{
-	pw_printf(PW_LOG_DEBUG, "Reloading libalpm\n");
-
-	int ret = alpm_release();
-	if (ret) {
-		return ret;
-	}
-
-	ret = alpm_initialize();
-	if (ret) {
-		return ret;
-	}
-
-	return setup_pacman_environment(1);
-}

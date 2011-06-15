@@ -66,23 +66,6 @@ int yesno(const char *fmt, ...);
 int mcq(const char *qn, const char *array, int arraySize, int preset);
 
 char *have_dotinstall(void);
-alpm_list_t *list_diff(alpm_list_t *left, alpm_list_t *right,
-					   alpm_list_fn_cmp cmpfn);
-
-alpm_list_t *list_intersect(alpm_list_t *left, alpm_list_t *right,
-							alpm_list_fn_cmp cmpfn);
-
-/* Returns a pmpkg_t * if given package is found in dbcache.
- * @param dbcache list of pmpkg_t *
- * @param pkgname package name
- */
-pmpkg_t *cache_find_pkg(alpm_list_t *dbcache, const char *pkgname);
-
-/* Returns a pmpkg_t * if given package is found in any of the dbs.
- * @param dbs list of pmdb_t *
- * @param pkgname package name
- */
-pmpkg_t *dbs_find_pkg(alpm_list_t *dbs, const char *pkgname);
 
 /* Prints the color of a repo */
 void color_repo(const char *repo);
@@ -115,34 +98,5 @@ unsigned long sdbm(const char *str);
 	pw_printf(PW_LOG_ERROR, "%s: %s\n", __func__, pw_strerror(errnum));\
 	return retval;\
 } while (0)
-
-#define RET_ERR_VOID(errnum) do {\
-	pwerrno = errnum;\
-	return;\
-} while (0)
-
-#define CALLOC(myptr, nmemb, mysz, act) do {\
-	myptr = xcalloc(nmemb, mysz);\
-	if (!myptr) {\
-		act;\
-	}\
-} while (0)
-
-#define MALLOC(myptr, mysz, act) do {\
-	myptr = malloc(mysz);\
-	if (!myptr) {\
-		act;\
-	}\
-} while (0)
-
-#define STRDUP(mydest, myorig, act) do {\
-	mydest = strdup(myorig);\
-	if (!mydest) {\
-		act;\
-	}\
-} while(0)
-
-#define FREE(myptr) if (myptr) { free(myptr); }
-#define FCLOSE(myfp) if (myfp) { fclose(myfp); myfp = NULL; }
 
 #endif

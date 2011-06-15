@@ -101,30 +101,6 @@ cleanup:
 	return ret;
 }
 
-/* Downloads all the tarball PKGBUILDS from AUR.
- * returns 0 on success, -1 on failure.
- */
-int download_packages(CURL *curl, alpm_list_t *packages, alpm_list_t **failed_packages)
-{
-	int errors, status;
-	alpm_list_t *i;
-
-	errors = 0;
-
-	CLEAR_ERRNO();
-	for (i = packages; i; i = i->next) {
-		status = download_single_package(curl, (char *) i->data, failed_packages, 1);
-
-		if (pwerrno == PW_ERR_ACCESS) {
-			return -1;
-		}
-
-		errors += status ? 1: 0;
-	}
-
-	return errors ? -1 : 0;
-}
-
 /* Downloads and extracts a single package.
  * returns 0 on success, -1 on failure.
  */
