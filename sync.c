@@ -468,8 +468,7 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 	return final_targets;
 }
 
-/* TODO: Resolve all deps instead of one by one
- * -Su, experimental feature
+/* -Su
  * @param targets list of strings
  * @param hashdb hash database
  */
@@ -511,7 +510,6 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 		goto cleanup;
 	}
 
-	/* TODO: Remove this? Not too informative for users */
 	final_targets = topo_get_targets(hashdb, graph, topost);
 	if (final_targets) {
 		topo_install(hashdb, final_targets);

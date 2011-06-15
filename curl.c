@@ -36,8 +36,6 @@ CURL *curl_easy_new(void)
 void curl_reset(CURL *curl)
 {
 	curl_easy_reset(curl);
-
-	/* TODO: Shift this to conf file */
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 }

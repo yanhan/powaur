@@ -165,7 +165,6 @@ int hash_pos(struct hash_table *htable, void *data)
 alpm_list_t *hash_to_list(struct hash_table *htable)
 {
 	alpm_list_t *data_list = NULL;
-	/* TODO: Remove type variable */
 	if (htable->type != HASH_TABLE) {
 		return NULL;
 	}

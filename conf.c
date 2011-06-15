@@ -135,8 +135,7 @@ static void parse_pmoption_keyval(int *flag, int *flag_com, char *line,
 	}
 }
 
-/* TODO: Get rid of this parsing comments shit quick.
- * A lot of hell can break loose.
+/* A lot of hell can break loose.
  */
 static void free_cachedir(void **cachedir)
 {
