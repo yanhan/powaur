@@ -15,8 +15,8 @@
 struct vertex {
 	void *data;
 	int *adj;
-	int nr;
-	int sz;
+	unsigned int nr;
+	unsigned int sz;
 	int dfs_idx;
 
 	enum {
@@ -62,21 +62,21 @@ static void vertex_dfs_reset(struct vertex *vertex)
 /* Add an edge to the vertex */
 static void vertex_add_edge(struct vertex *vertex, int edge)
 {
-	int i;
-	for (i = 0; i < vertex->nr; ++i) {
-		if (edge == vertex->adj[i]) {
-			return;
-		}
-	}
-
 	if (vertex->nr >= vertex->sz) {
-		int new_size = new_alloc_size(vertex->sz);
-		if (new_size < vertex->sz) {
+		unsigned int new_size = new_alloc_size(vertex->sz);
+		if (new_size <= vertex->sz) {
 			die("vertex_add_edge: adjacency list size exceeded");
 		}
 
 		vertex->adj = xrealloc(vertex->adj, new_size * sizeof(int));
 		vertex->sz = new_size;
+	}
+
+	unsigned int i;
+	for (i = 0; i < vertex->nr; ++i) {
+		if (edge == vertex->adj[i]) {
+			return;
+		}
 	}
 
 	vertex->adj[vertex->nr++] = edge;
@@ -131,7 +131,7 @@ void graph_free(struct graph *graph)
 
 static void graph_grow(struct graph *graph)
 {
-	int new_size = new_alloc_size(graph->sz);
+	unsigned int new_size = new_alloc_size(graph->sz);
 	graph->vertices = xrealloc(graph->vertices, new_size * sizeof(struct vertex));
 	graph->sz = new_size;
 }
