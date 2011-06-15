@@ -21,8 +21,6 @@ struct json_ctx_t {
 	int jsondepth;
 };
 
-yajl_handle yajl_init(void);
-
 /* Query functions */
 alpm_list_t *query_aur(CURL *curl, const char *pkgname, enum aurquery_t type);
 

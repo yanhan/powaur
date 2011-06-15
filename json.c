@@ -12,7 +12,7 @@
 #include "query.h"
 #include "util.h"
 
-yajl_handle yajl_init(void)
+static yajl_handle yajl_init(void)
 {
 	/* Reset the json_ctx */
 	pwhandle->json_ctx->pkglist = NULL;
