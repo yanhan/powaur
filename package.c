@@ -135,28 +135,7 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 			if (preserve_ver) {
 				*list = alpm_list_add(*list, strdup(token));
 			} else {
-				/* This is all just a quick hack.
-				 * What really needs to be done is to return the version
-				 * string as well.
-				 */
-				tmpstr = strchr(token, '<');
-				if (tmpstr) {
-					*tmpstr = 0;
-					token = strtrim(token);
-				}
-
-				tmpstr = strchr(token, '>');
-				if (tmpstr) {
-					*tmpstr = 0;
-					token = strtrim(token);
-				}
-
-				tmpstr = strchr(token, '=');
-				if (tmpstr) {
-					*tmpstr = 0;
-					token = strtrim(token);
-				}
-
+				token = strtrim_ver(token);
 				*list = alpm_list_add(*list, strdup(token));
 			}
 
