@@ -144,17 +144,17 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 	}
 }
 
-#define PARSE_BASH_ARRAY_PREAMBLE(myline) \
-	while (1) {\
-		myline = strchr(myline, '(');\
-		if (myline) {\
-			++myline;\
-			break;\
-		}\
-		myline = fgets(buf, PATH_MAX, fp);\
-		if (feof (fp)) break;\
-		myline = strtrim(myline);\
-	}\
+#define PARSE_BASH_ARRAY_PREAMBLE(myline)                            \
+	while (1) {                                                      \
+		myline = strchr(myline, '(');                                \
+		if (myline) {                                                \
+			++myline;                                                \
+			break;                                                   \
+		}                                                            \
+		myline = fgets(buf, PATH_MAX, fp);                           \
+		if (feof (fp)) break;                                        \
+		myline = strtrim(myline);                                    \
+	}                                                                \
 
 /* Obtain deps, optional deps, conflicts, replaces from fp */
 void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)

@@ -16,9 +16,6 @@
 /* For threaded downloads, points to targets */
 alpm_list_t *pw_jobq = NULL;
 
-/* Assumption: curl options have been set except for url and writedata
- * returns -1 on failure, 0 on success.
- */
 int download_single_file(CURL *curl, const char *url, FILE *fp)
 {
 	int ret = 0;
@@ -52,12 +49,6 @@ int download_single_file(CURL *curl, const char *url, FILE *fp)
 	return ret;
 }
 
-/* Downloads a single tarball from AUR.
- * Assumption: We're already in destination dir.
- *
- * returns 0 on success, -1 on failure.
- * Failed package is added to failed_packages list if it's not NULL.
- */
 int download_single_package(CURL *curl, const char *pkgname,
 							alpm_list_t **failed_packages, int verbose)
 {
@@ -101,9 +92,6 @@ cleanup:
 	return ret;
 }
 
-/* Downloads and extracts a single package.
- * returns 0 on success, -1 on failure.
- */
 int dl_extract_single_package(CURL *curl, const char *pkgname,
 							  alpm_list_t **failed_packages, int verbose)
 {

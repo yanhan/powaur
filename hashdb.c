@@ -14,15 +14,15 @@ struct pw_hashdb *hashdb_new(void)
 
 	/* Local, sync, AUR db hash tables of struct pkgpair */
 	hashdb->local = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
-	hashdb->sync = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
-	hashdb->aur = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
+	hashdb->sync  = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
+	hashdb->aur   = hash_new(HASH_TABLE, pkgpair_sdbm, pkgpair_cmp);
 
 	hashdb->aur_downloaded = hash_new(HASH_TABLE, (pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-	hashdb->aur_outdated = hash_new(HASH_TABLE, (pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	hashdb->aur_outdated   = hash_new(HASH_TABLE, (pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 
 	/* Local and sync provides */
 	hashdb->local_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
-	hashdb->sync_provides = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
+	hashdb->sync_provides  = hashbst_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 
 	/* Cache provided->providing key-value mapping */
 	hashdb->provides_cache = hashmap_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
@@ -33,9 +33,9 @@ struct pw_hashdb *hashdb_new(void)
 
 	/* Initialize pkgfrom_t */
 	hashdb->pkg_from_unknown = PKG_FROM_UNKNOWN;
-	hashdb->pkg_from_local = PKG_FROM_LOCAL;
-	hashdb->pkg_from_sync = PKG_FROM_SYNC;
-	hashdb->pkg_from_aur = PKG_FROM_AUR;
+	hashdb->pkg_from_local   = PKG_FROM_LOCAL;
+	hashdb->pkg_from_sync    = PKG_FROM_SYNC;
+	hashdb->pkg_from_aur     = PKG_FROM_AUR;
 	return hashdb;
 }
 

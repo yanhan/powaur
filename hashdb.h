@@ -19,7 +19,6 @@ struct pw_hashdb {
 	struct hash_table *aur_outdated;
 	alpm_list_t *immediate_deps;
 
-	/* Provides */
 	struct hashbst *local_provides;
 	struct hashbst *sync_provides;
 

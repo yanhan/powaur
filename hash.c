@@ -7,8 +7,8 @@
 /* Adapted from pacman */
 static const unsigned int prime_list[] =
 {
-	109, 227, 467, 953, 2029, 4349, 4703,
-	10273, 22447, 45481, 92203, 202409, 410857,
+	109,    227,    467,    953,     2029,   4349,   4703,
+	10273,  22447,  45481,  92203,   202409, 410857,
 	834181, 902483, 976369, 20000003
 };
 
@@ -495,7 +495,8 @@ static void hashbst_tree_node_free(struct hashbst_tree_node *node)
 }
 
 /* Recursion */
-static void *hashbst_tree_node_search(struct hashbst_tree_node *node, void *search, hbst_search_fn fn)
+static void *hashbst_tree_node_search(struct hashbst_tree_node *node, void *search,
+									  hbst_search_fn fn)
 {
 	if (!node) {
 		return NULL;

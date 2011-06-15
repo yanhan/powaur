@@ -78,25 +78,25 @@ unsigned long sdbm(const char *str);
 
 #define MINI_BUFSZ 60
 
-#define ASSERT(somecond, someact) do {\
-	if (!(somecond)) {\
-		someact;\
-	}\
+#define ASSERT(somecond, someact) do {                               \
+	if (!(somecond)) {                                               \
+		someact;                                                     \
+	}                                                                \
 } while (0)
 
-#define PW_SETERRNO(errnum) do {\
-	pwerrno = errnum;\
-	pw_fprintf(PW_LOG_ERROR, stderr, "%s: %s\n", __func__, pw_strerrorlast());\
+#define PW_SETERRNO(errnum) do {                                               \
+	pwerrno = errnum;                                                          \
+	pw_fprintf(PW_LOG_ERROR, stderr, "%s: %s\n", __func__, pw_strerrorlast()); \
 } while (0)
 
-#define CLEAR_ERRNO() do {\
-	pwerrno = PW_ERR_OK;\
+#define CLEAR_ERRNO() do {                                           \
+	pwerrno = PW_ERR_OK;                                             \
 } while (0)
 
-#define RET_ERR(errnum, retval) do {\
-	pwerrno = errnum;\
-	pw_printf(PW_LOG_ERROR, "%s: %s\n", __func__, pw_strerror(errnum));\
-	return retval;\
+#define RET_ERR(errnum, retval) do {                                           \
+	pwerrno = errnum;                                                          \
+	pw_printf(PW_LOG_ERROR, "%s: %s\n", __func__, pw_strerror(errnum));        \
+	return retval;                                                             \
 } while (0)
 
 #endif
