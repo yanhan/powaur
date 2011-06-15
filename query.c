@@ -405,7 +405,7 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 	alpm_list_t *deps;
 
 	CURL *curl;
-	curl = curl_easy_init();
+	curl = curl_easy_new();
 	if (!curl) {
 		error(PW_ERR_CURL_INIT);
 		return;
