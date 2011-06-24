@@ -180,6 +180,18 @@ alpm_list_t *hash_to_list(struct hash_table *htable)
 	return data_list;
 }
 
+void hash_walk(struct hash_table *htable, void (*fn) (void *))
+{
+	unsigned int i;
+	struct hash_table_entry *array = htable->table;
+
+	for (i = 0; i < htable->sz; ++i) {
+		if (array[i].u.data) {
+			fn(array[i].u.data);
+		}
+	}
+}
+
 /*******************************************************************************
  *
  * Normal hash table

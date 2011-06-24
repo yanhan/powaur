@@ -46,6 +46,13 @@ int hash_pos(struct hash_table *table, void *data);
  */
 alpm_list_t *hash_to_list(struct hash_table *table);
 
+/* Iterates over hash table and applies function to non-null entries,
+ * equivalent to map fn list in functional languages.
+ *
+ * Only valid for HASH_TABLE for now
+ */
+void hash_walk(struct hash_table *table, void (*fn) (void *));
+
 /*******************************************************************************
  *
  * Hash BST functions
