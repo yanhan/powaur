@@ -37,5 +37,6 @@ void print_topo_order(struct graph *graph, struct stack *topost);
 
 int powaur_query(alpm_list_t *targets);
 int powaur_crawl(alpm_list_t *targets);
+int powaur_list_aur(void);
 
 #endif

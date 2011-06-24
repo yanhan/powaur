@@ -49,6 +49,9 @@ many other valid topological orders) for the packages.
 Search the AUR for packages maintained by person. 1 and only 1 maintainer must
 be specified.
 .TP
+.B "--list-aur"
+Lists all installed AUR packages.
+.TP
 .B "-h, --help"
 Displays help message and exits.
 .TP

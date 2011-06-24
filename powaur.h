@@ -9,7 +9,8 @@ enum {
 	PW_OP_GET,
 	PW_OP_MAINTAINER,
 	PW_OP_BACKUP,
-	PW_OP_CRAWL
+	PW_OP_CRAWL,
+	PW_OP_LISTAUR
 };
 
 enum {

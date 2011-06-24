@@ -69,12 +69,13 @@ static void usage(unsigned short op)
 		printf("%s %s <operation> [...]\n", USAGE, MYNAME);
 		printf("%s%s {-h --help}\n", TAB, MYNAME);
 		printf("%s%s {-G --getpkgbuild} <%s>\n", TAB, MYNAME, PKG);
-		printf("%s%s --crawl <%s>\n", TAB, MYNAME, PKG);
 		printf("%s%s {-S --sync}        [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
 		printf("%s%s {-Q --query}       [%s] [%s]\n", TAB, MYNAME, OPT, PKG);
 		printf("%s%s {-M --maintainer}  <%s>\n", TAB, MYNAME, PKG);
 		printf("%s%s {-B --backup} [dir]\n", TAB, MYNAME);
 		printf("%s%s {-V --version}\n", TAB, MYNAME);
+		printf("%s%s --crawl <%s>\n", TAB, MYNAME, PKG);
+		printf("%s%s --list-aur\n", TAB, MYNAME);
 	} else {
 		if (op == PW_OP_SYNC) {
 			printf("%s %s {-S --sync} [%s] [%s]\n", USAGE, MYNAME, OPT, PKG);
@@ -86,6 +87,8 @@ static void usage(unsigned short op)
 			printf("%s %s {-M --maintainer <%s>\n", USAGE, MYNAME, PKG);
 		} else if (op == PW_OP_BACKUP) {
 			printf("%s %s {-B --backup} [dir]\n", USAGE, MYNAME);
+		} else if (op == PW_OP_LISTAUR) {
+			printf("%s %s --list-aur\n", USAGE, MYNAME);
 		}
 
 		printf("%s:\n", OPT);
@@ -169,6 +172,10 @@ static int parsearg_op(int option, int dry_run)
 	case 'V':
 		if (dry_run) break;
 		config->version = 1;
+		break;
+	case PW_OP_LISTAUR:
+		if (dry_run) break;
+		config->op = (config->op == PW_OP_MAIN ? PW_OP_LISTAUR : PW_OP_INVAL);
 		break;
 	default:
 		return -1;
@@ -291,6 +298,7 @@ static int parseargs(int argc, char *argv[])
 		{"info", no_argument, NULL, 'i'},
 		{"search", no_argument, NULL, 's'},
 		{"upgrade", no_argument, NULL, 'u'},
+		{"list-aur", no_argument, NULL, PW_OP_LISTAUR},
 		{"check", no_argument, NULL, OPT_CHECK_ONLY},
 		{"color", no_argument, NULL, OPT_COLOR},
 		{"crawl", no_argument, NULL, PW_OP_CRAWL},
@@ -425,6 +433,9 @@ int main(int argc, char *argv[])
 		break;
 	case PW_OP_CRAWL:
 		ret = powaur_crawl(powaur_targets);
+		break;
+	case PW_OP_LISTAUR:
+		ret = powaur_list_aur();
 		break;
 	default:
 		break;

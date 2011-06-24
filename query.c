@@ -555,3 +555,16 @@ int powaur_crawl(alpm_list_t *targets)
 	}
 	return ret;
 }
+
+int powaur_list_aur(void)
+{
+	struct pw_hashdb *hashdb = build_hashdb();
+	if (!hashdb) {
+		pw_fprintf(PW_LOG_ERROR, stderr, "Failed to build hashdb!\n");
+		return -1;
+	}
+
+	hash_walk(hashdb->aur, pkgpair_print);
+	hashdb_free(hashdb);
+	return 0;
+}
