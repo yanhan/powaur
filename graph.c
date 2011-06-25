@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "graph.h"
@@ -7,6 +8,9 @@
 #define GRAPH_INIT_VERTICES 40
 #define VINDEX_INIT_SZ 109
 #define STACK_INIT_SZ 40
+
+/* Debug output for dependency resolution */
+static int graph_debug_resolve = 0;
 
 /* Graph index data structures
  * Used internally inside struct graph
@@ -193,6 +197,13 @@ int graph_dfs(struct graph *graph, int root, struct stack *topost)
 		next = vertex_get_next_edge(graph, curv);
 		if (next->color == GRAY) {
 			ret = -1;
+			if (graph_debug_resolve) {
+				const char *visiting_pkg = curv->data;
+				const char *visited_pkg = next->data;
+
+				fprintf(stderr, "Cyclic dep with %s -> ... -> %s -> %s\n",
+						visited_pkg, visiting_pkg, visited_pkg);
+			}
 			break;
 		} else if (next->color == WHITE) {
 			next->color = GRAY;
@@ -231,6 +242,16 @@ int graph_toposort(struct graph *graph, struct stack *topost)
 	}
 
 	return cycle;
+}
+
+void graph_enable_debug_resolve(void)
+{
+	graph_debug_resolve = 1;
+}
+
+void graph_disable_debug_resolve(void)
+{
+	graph_debug_resolve = 0;
 }
 
 struct stack *stack_new(size_t elemSz)

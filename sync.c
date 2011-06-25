@@ -494,6 +494,9 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 		return error(PW_ERR_CHDIR);
 	}
 
+	/* Enable debugging resolution */
+	graph_enable_debug_resolve();
+
 	graph = graph_new((pw_hash_fn) sdbm, (pw_hashcmp_fn) strcmp);
 	topost = stack_new(sizeof(int));
 
@@ -513,6 +516,8 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 		printf("Cyclic dependencies detected!\n");
 		goto cleanup;
 	}
+
+	graph_disable_debug_resolve();
 
 	final_targets = topo_get_targets(hashdb, graph, topost);
 	if (final_targets) {

@@ -43,6 +43,12 @@ void *graph_get_vertex_data(struct graph *graph, int pos);
  */
 int graph_toposort(struct graph *graph, struct stack *topost);
 
+/* Enables debugging output for dependency resolution
+ * Currently, shows what causes cyclic deps
+ */
+void graph_enable_debug_resolve(void);
+void graph_disable_debug_resolve(void);
+
 
 /* Stack */
 struct stack {
