@@ -482,6 +482,10 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 	int ret = 0;
 
 	char cwd[PATH_MAX];
+	if (!targets) {
+		return 0;
+	}
+
 	if (!getcwd(cwd, PATH_MAX)) {
 		return error(PW_ERR_GETCWD);
 	}
