@@ -84,6 +84,7 @@ $(OBJS): error.h environment.h powaur.h util.h wrapper.h
 conf.o environment.o query.o: conf.h
 download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
+query.o sync.o: graph.h
 handle.o json.o powaur.o: handle.h
 hash.o hashdb.o sync.o: hash.h
 download.o package.o query.o sync.o: hashdb.h
