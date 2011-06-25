@@ -744,7 +744,7 @@ free_aurpkg:
 
 	if (downgrade) {
 		printf("\n%sLocally installed but newer than AUR, ignoring:%s\n",
-			   color.cyan, color.nocolor);
+			   color.bcyan, color.nocolor);
 		print_list(downgrade);
 	}
 
