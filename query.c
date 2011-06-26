@@ -385,6 +385,32 @@ aur_deps:
 	return 0;
 }
 
+/* Adds immediate dependencies to hashdb->immediate_deps
+ * This enables us to print the immediate deps instead of the entire huge
+ * dependency graph.
+ */
+static void add_immediate_deps(struct pw_hashdb *hashdb, const char *pkgname,
+							   alpm_list_t *deps)
+{
+	enum pkgfrom_t *from = NULL;
+	alpm_list_t *i;
+	struct pkgpair pkgpair;
+
+	from = hashmap_search(hashdb->pkg_from, (void *) pkgname);
+	if (!from) {
+		return;
+	} else if (*from == PKG_FROM_AUR) {
+		pkgpair.pkgname = pkgname;
+		/* Applies to new AUR packages and outdated AUR packages */
+		if (!hash_search(hashdb->aur, &pkgpair) ||
+			hash_search(hashdb->aur_outdated, (void *) pkgname)) {
+			for (i = deps; i; i = i->next) {
+				hashdb->immediate_deps = alpm_list_add(hashdb->immediate_deps, i->data);
+			}
+		}
+	}
+}
+
 void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 					 alpm_list_t *targets, int force)
 {
@@ -441,6 +467,9 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 		}
 
 		hash_insert(resolved, (void *) pkgpair.pkgname);
+
+		/* Add immediate dependencies, for pretty printing purposes */
+		add_immediate_deps(hashdb, pkgpair.pkgname, deps);
 cleanup_deps:
 		alpm_list_free(deps);
 	}

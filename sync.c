@@ -367,6 +367,57 @@ cleanup:
 	return found ? 0 : -1;
 }
 
+/* Prints immediate dependencies */
+static void print_immediate_deps(struct pw_hashdb *hashdb)
+{
+	alpm_list_t *i;
+	enum pkgfrom_t *from = NULL;
+
+	if (!hashdb->immediate_deps) {
+		pw_printf(PW_LOG_NORM, "\nNo dependencies found.\n\n");
+		return;
+	}
+
+	printf("\n");
+	pw_printf(PW_LOG_INFO, "Dependencies:\n");
+	for (i = hashdb->immediate_deps; i; i = i->next) {
+		from = hashmap_search(hashdb->pkg_from, i->data);
+		switch (*from) {
+		case PKG_FROM_LOCAL:
+			pw_printf(PW_LOG_NORM, "%s%s (installed)%s\n", color.bgreen, i->data,
+					  color.nocolor);
+			break;
+		case PKG_FROM_SYNC:
+			pw_printf(PW_LOG_NORM, "%s%s (found in sync)%s\n", color.bblue, i->data,
+					  color.nocolor);
+			break;
+		case PKG_FROM_AUR:
+			/* Magic happens here */
+			if (hash_search(hashdb->aur_outdated, (void *) i->data)) {
+				pw_printf(PW_LOG_NORM, "%s%s (AUR target)%s\n",
+						  color.bred, i->data, color.nocolor);
+			} else {
+				struct pkgpair pkgpair;
+				pkgpair.pkgname = i->data;
+				if (hash_search(hashdb->aur, &pkgpair)) {
+					pw_printf(PW_LOG_NORM, "%s%s (installed AUR)%s\n", color.bblue,
+							  i->data, color.nocolor);
+				} else {
+					/* New AUR package */
+					pw_printf(PW_LOG_NORM, "%s%s (AUR dep)%s\n", color.bmag, i->data,
+							  color.nocolor);
+				}
+			}
+			break;
+		default:
+			/* Shouldn't happen */
+			pw_printf(PW_LOG_NORM, "Unknown\n");
+			break;
+		}
+	}
+	printf("\n");
+}
+
 /* Installs packages from the AUR
  * Assumes we are already in directory with all the relevant PKGBUILDS dled
  *
@@ -378,7 +429,7 @@ static int topo_install(struct pw_hashdb *hashdb, alpm_list_t *targets)
 	alpm_list_t *i;
 	int ret;
 
-	pw_printf(PW_LOG_INFO, "Upgrading:\n");
+	pw_printf(PW_LOG_INFO, "Syncing:\n");
 	for (i = targets; i; i = i->next) {
 		printf("%s%s%s\n", color.bmag, i->data, color.nocolor);
 	}
@@ -408,38 +459,38 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 	struct pkgpair pkgpair;
 	alpm_list_t *final_targets = NULL;
 
-	pw_printf(PW_LOG_INFO, "Dependency graph:\n");
+	pw_printf(PW_LOG_VDEBUG, "\n%sDependency graph:\n%s", color.bold, color.nocolor);
 	while (!stack_empty(topost)) {
 		stack_pop(topost, &curVertex);
 		pkgname = graph_get_vertex_data(graph, curVertex);
 		from = hashmap_search(hashdb->pkg_from, (void *) pkgname);
 
 		if (cnt++) {
-			printf(" -> ");
+			pw_printf(PW_LOG_VDEBUG, " -> ");
 		}
 		switch (*from) {
 		case PKG_FROM_LOCAL:
-			pw_printf(PW_LOG_NORM, "%s%s (installed)%s", color.bgreen, pkgname,
+			pw_printf(PW_LOG_VDEBUG, "%s%s (installed)%s", color.bgreen, pkgname,
 					  color.nocolor);
 			break;
 		case PKG_FROM_SYNC:
-			pw_printf(PW_LOG_NORM, "%s%s (found in sync)%s", color.bblue, pkgname,
+			pw_printf(PW_LOG_VDEBUG, "%s%s (found in sync)%s", color.bblue, pkgname,
 					  color.nocolor);
 			break;
 		case PKG_FROM_AUR:
 			/* Magic happens here */
 			if (hash_search(hashdb->aur_outdated, (void *) pkgname)) {
-				pw_printf(PW_LOG_NORM, "%s%s (AUR target)%s",
+				pw_printf(PW_LOG_VDEBUG, "%s%s (AUR target)%s",
 						  color.bred, pkgname, color.nocolor);
 				final_targets = alpm_list_add(final_targets, (void *) pkgname);
 			} else {
 				pkgpair.pkgname = pkgname;
 				if (hash_search(hashdb->aur, &pkgpair)) {
-					pw_printf(PW_LOG_NORM, "%s%s (installed AUR)%s", color.bblue,
+					pw_printf(PW_LOG_VDEBUG, "%s%s (installed AUR)%s", color.bblue,
 							  pkgname, color.nocolor);
 				} else {
 					/* New AUR package */
-					pw_printf(PW_LOG_NORM, "%s%s (AUR dep)%s", color.bmag, pkgname,
+					pw_printf(PW_LOG_VDEBUG, "%s%s (AUR dep)%s", color.bmag, pkgname,
 							  color.nocolor);
 					final_targets = alpm_list_add(final_targets, (void *) pkgname);
 				}
@@ -447,12 +498,13 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 			break;
 		default:
 			/* Shouldn't happen */
-			pw_printf(PW_LOG_NORM, "Unknown");
+			pw_printf(PW_LOG_VDEBUG, "Unknown");
 			break;
 		}
 	}
 
-	printf("\n\n");
+	pw_printf(PW_LOG_VDEBUG, "\n");
+	print_immediate_deps(hashdb);
 	return final_targets;
 }
 

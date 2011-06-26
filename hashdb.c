@@ -50,6 +50,7 @@ void hashdb_free(struct pw_hashdb *hashdb)
 	hash_free(hashdb->aur);
 	hash_free(hashdb->aur_downloaded);
 	hash_free(hashdb->aur_outdated);
+	alpm_list_free(hashdb->immediate_deps);
 	hashbst_free(hashdb->local_provides);
 	hashbst_free(hashdb->sync_provides);
 	hashmap_free(hashdb->provides_cache);

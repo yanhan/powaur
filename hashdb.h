@@ -1,6 +1,8 @@
 #ifndef POWAUR_HASHDB_H
 #define POWAUR_HASHDB_H
 
+#include <alpm_list.h>
+
 #include "hash.h"
 #include "memlist.h"
 #include "powaur.h"
@@ -15,6 +17,7 @@ struct pw_hashdb {
 	/* Resolved packages */
 	struct hash_table *aur_downloaded;
 	struct hash_table *aur_outdated;
+	alpm_list_t *immediate_deps;
 
 	/* Provides */
 	struct hashbst *local_provides;
