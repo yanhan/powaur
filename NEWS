@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
 --------------------------------------------------------------------------------
+0.1.4.1       - Allow installing of packages as root
+              - Per user directories for downloading packages. Please comment out
+			    the "TmpDir" option in your powaur.conf for this to take effect
+			  - For -S, print immediate dependencies
+			  - For -S, only print dependency graph when --debug is supplied
 0.1.4         - -Su added to check for outdated AUR packages
               - --crawl operation to give valid topological order for packages
 			  - Dependency resolution for -S
@@ -12,7 +17,7 @@ VERSION         DESCRIPTION
               - Add "MaxThreads" option in config file
               - Add --threads option to specify maximum no. of threads.
               - Add --deps flag for -G. By default, dependency resolution is
-			    turned off.
+			    turned off
 0.1.1         - -G flag now resolves dependencies
               - Removed unsuccessfully downloaded packages
 			  - Add verbose flag
