@@ -17,9 +17,9 @@
 #define AUR_RPC_TYPE_SEARCH "search"
 
 /* powaur defaults */
-#define PW_DEF_DIR "/tmp/powaur/"
-#define PW_DEF_EDITOR "vim"
-#define PW_CONF "powaur.conf"
+#define PW_DEF_DIR        "/tmp/powaur"
+#define PW_DEF_EDITOR     "vim"
+#define PW_CONF           "powaur.conf"
 #define PW_DEF_MAXTHREADS 10
 
 /* Pacman defaults */

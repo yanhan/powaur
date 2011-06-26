@@ -1,7 +1,9 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pwd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <alpm_list.h>
 
@@ -202,7 +204,15 @@ cleanup:
 
 	/* Use default settings for unspecified options */
 	if (!powaur_dir) {
-		powaur_dir = xstrdup(PW_DEF_DIR);
+		uid_t myuid = geteuid();
+		struct passwd *passwd_struct = getpwuid(myuid);
+		if (!passwd_struct) {
+			powaur_dir = xstrdup(PW_DEF_DIR);
+		} else {
+			snprintf(buf, PATH_MAX, "%s-%s", PW_DEF_DIR, passwd_struct->pw_name);
+			powaur_dir = xstrdup(buf);
+		}
+
 		pw_printf(PW_LOG_DEBUG, "%sFalling back to default directory %s\n",
 				  TAB, powaur_dir);
 	}

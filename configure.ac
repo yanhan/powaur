@@ -36,13 +36,14 @@ AC_CHECK_LIB([pthread], [pthread_create], ,
 	AC_MSG_ERROR([pthread is needed to compile powaur]))
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/ioctl.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/ioctl.h unistd.h pwd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
+AC_TYPE_UID_T
 AC_STRUCT_TM
 
 # Checks for library functions.
