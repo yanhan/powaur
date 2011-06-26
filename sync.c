@@ -109,8 +109,13 @@ fork_pacman:
 	if (pid == (pid_t) -1) {
 		return error(PW_ERR_FORK_FAILED);
 	} else if (pid == 0) {
-		/* Install using pacman */
-		execlp("makepkg", "makepkg", "-si", NULL);
+		/* Check if we're root. Invoke makepkg with --asroot if so */
+		uid_t myuid = geteuid();
+		if (myuid > 0) {
+			execlp("makepkg", "makepkg", "-si", NULL);
+		} else {
+			execlp("makepkg", "makepkg", "--asroot", "-si", NULL);
+		}
 	} else {
 		/* Parent process */
 		ret = wait_or_whine(pid, "makepkg");
