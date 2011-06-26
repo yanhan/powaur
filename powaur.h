@@ -29,7 +29,8 @@ enum pwloglevel_t {
 	PW_LOG_INFO = (1 << 1),
 	PW_LOG_WARNING = (1 << 2),
 	PW_LOG_ERROR = (1 << 3),
-	PW_LOG_DEBUG = (1 << 4)
+	PW_LOG_DEBUG = (1 << 4),
+	PW_LOG_VDEBUG = (1 << 5)
 };
 
 enum pkgfrom_t {

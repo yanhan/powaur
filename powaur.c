@@ -237,6 +237,7 @@ static int parsearg_global(int option)
 	switch (option) {
 	case OPT_DEBUG:
 		config->loglvl |= PW_LOG_DEBUG;
+		config->loglvl |= PW_LOG_VDEBUG;
 		break;
 	case OPT_SORT_VOTE:
 		config->sort_votes = 1;
