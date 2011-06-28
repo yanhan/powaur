@@ -174,7 +174,8 @@ static const char *normalize_package(CURL *curl, struct pw_hashdb *hashdb,
 	pkgpair.pkgname = pkgname;
 	pkgpair.pkg = NULL;
 
-	/* If we know where pkg is from and it's not AUR (unresolved), done */
+	/* If we know where pkg is from and it's not AUR / it's from AUR and
+	 * already downloaded, done */
 	pkgfrom = hashmap_search(hashdb->pkg_from, (void *) pkgname);
 	if (pkgfrom) {
 		if (*pkgfrom != PKG_FROM_AUR ||
@@ -392,12 +393,40 @@ aur_deps:
 	return 0;
 }
 
+/* Depending on resolve_lvl, decide if we want to continue resolving the package
+ *
+ * If resolve_lvl is RESOLVE_IMMEDIATE, only out of date / new AUR packages
+ * will be resolved.
+ */
+static void should_we_continue_resolving(CURL *curl,
+										 struct pw_hashdb *hashdb,
+										 struct stack *st,
+										 struct pkgpair *deppkg,
+										 int resolve_lvl)
+{
+	if (resolve_lvl == RESOLVE_THOROUGH) {
+		stack_push(st, deppkg);
+		return;
+	}
+
+	/* RESOLVE_IMMEDIATE. Normalize package. Only continue resolving
+	 * new AUR packages
+	 */
+	const char *pkgname;
+	pkgname = normalize_package(curl, hashdb, deppkg->pkgname, resolve_lvl);
+
+	/* Continue resolving for new AUR packages */
+	if (hash_search(hashdb->aur_downloaded, (void *) pkgname)) {
+		stack_push(st, deppkg);
+	}
+}
+
 /* Adds immediate dependencies to hashdb->immediate_deps
  * This enables us to print the immediate deps instead of the entire huge
  * dependency graph.
  */
 static void add_immediate_deps(struct pw_hashdb *hashdb, const char *pkgname,
-							   alpm_list_t *deps)
+							   alpm_list_t *deps, struct hash_table *immediate)
 {
 	enum pkgfrom_t *from = NULL;
 	alpm_list_t *i;
@@ -412,7 +441,10 @@ static void add_immediate_deps(struct pw_hashdb *hashdb, const char *pkgname,
 		if (!hash_search(hashdb->aur, &pkgpair) ||
 			hash_search(hashdb->aur_outdated, (void *) pkgname)) {
 			for (i = deps; i; i = i->next) {
-				hashdb->immediate_deps = alpm_list_add(hashdb->immediate_deps, i->data);
+				if (!hash_search(immediate, (void *) i->data)) {
+					hashdb->immediate_deps = alpm_list_add(hashdb->immediate_deps, i->data);
+					hash_insert(immediate, (void *) i->data);
+				}
 			}
 		}
 	}
@@ -432,6 +464,8 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 	struct stack *st = stack_new(sizeof(struct pkgpair));
 	struct hash_table *resolved = hash_new(HASH_TABLE, (pw_hash_fn) sdbm,
 										   (pw_hashcmp_fn) strcmp);
+	struct hash_table *immediate = hash_new(HASH_TABLE, (pw_hash_fn) sdbm,
+											(pw_hashcmp_fn) strcmp);
 	int ret;
 	struct pkgpair pkgpair, deppkg;
 	alpm_list_t *i;
@@ -468,7 +502,10 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 		for (i = deps; i; i = i->next) {
 			deppkg.pkgname = i->data;
 			deppkg.pkg = NULL;
-			stack_push(st, &deppkg);
+
+			/* immediate vs thorough resolve */
+			should_we_continue_resolving(curl, hashdb, st, &deppkg, resolve_lvl);
+
 			/* dep --> current */
 			graph_add_edge(*graph, i->data, (void *) pkgpair.pkgname);
 		}
@@ -476,13 +513,14 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 		hash_insert(resolved, (void *) pkgpair.pkgname);
 
 		/* Add immediate dependencies, for pretty printing purposes */
-		add_immediate_deps(hashdb, pkgpair.pkgname, deps);
+		add_immediate_deps(hashdb, pkgpair.pkgname, deps, immediate);
 cleanup_deps:
 		alpm_list_free(deps);
 	}
 
 cleanup:
 	hash_free(resolved);
+	hash_free(immediate);
 	stack_free(st);
 	curl_easy_cleanup(curl);
 }
