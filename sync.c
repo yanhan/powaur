@@ -390,9 +390,7 @@ static int topo_install(struct pw_hashdb *hashdb, alpm_list_t *targets)
 	int ret;
 
 	pw_printf(PW_LOG_INFO, "Syncing:\n");
-	for (i = targets; i; i = i->next) {
-		printf("%s%s%s\n", color.bmag, i->data, color.nocolor);
-	}
+	print_list_color(targets, color.bmag);
 
 	for (i = targets; i; i = i->next) {
 		ret = install_single_package(i->data);

@@ -372,6 +372,37 @@ void print_list(alpm_list_t *list)
 	printf("\n");
 }
 
+void print_list_color(alpm_list_t *list, const char *wcolor)
+{
+	alpm_list_t *i;
+	size_t curcols, newlen;
+	size_t cols = getcols();
+	if (!list) {
+		printf("None\n");
+		return;
+	}
+
+	curcols = 0;
+	for (i = list; i; i = i->next) {
+		newlen = curcols + 2 + strlen(i->data);
+		if (newlen > cols) {
+			printf("\n");
+			curcols = 0;
+		}
+
+		if (curcols == 0) {
+			printf("%s%s%s", wcolor, i->data, color.nocolor);
+			curcols += strlen(i->data);
+			continue;
+		}
+
+		curcols = newlen;
+		printf("  %s%s%s", wcolor, i->data, color.nocolor);
+	}
+
+	printf("\n");
+}
+
 void print_list_prefix(alpm_list_t *list, const char *prefix)
 {
 	alpm_list_t *i;
