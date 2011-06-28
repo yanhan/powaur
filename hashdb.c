@@ -173,12 +173,6 @@ int pkgpair_cmp(const void *a, const void *b)
 	return strcmp(pair1->pkgname, pair2->pkgname);
 }
 
-void pkgpair_print(void *pkg)
-{
-	struct pkgpair *pkgpair_ptr = pkg;
-	printf("%s\n", pkgpair_ptr->pkgname);
-}
-
 void *provides_search(void *htable, void *val)
 {
 	struct hash_table *hash = htable;

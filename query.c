@@ -601,6 +601,13 @@ int powaur_crawl(alpm_list_t *targets)
 	return ret;
 }
 
+void pkgpair_print_color(void *p)
+{
+	struct pkgpair *pkgpair_ptr = p;
+	printf("%s%s%s %s%s%s\n", color.bold, pkgpair_ptr->pkgname, color.nocolor,
+		   color.bgreen, alpm_pkg_get_version(pkgpair_ptr->pkg), color.nocolor);
+}
+
 int powaur_list_aur(void)
 {
 	struct pw_hashdb *hashdb = build_hashdb();
@@ -609,7 +616,7 @@ int powaur_list_aur(void)
 		return -1;
 	}
 
-	hash_walk(hashdb->aur, pkgpair_print);
+	hash_walk(hashdb->aur, pkgpair_print_color);
 	hashdb_free(hashdb);
 	return 0;
 }

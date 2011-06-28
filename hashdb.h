@@ -53,7 +53,6 @@ struct pkgpair {
 
 unsigned long pkgpair_sdbm(void *pkg);
 int pkgpair_cmp(const void *a, const void *b);
-void pkgpair_print(void *pkg);
 
 /* Searches htable for given package val
  * Provided to hashbst_tree_search */
