@@ -125,6 +125,7 @@ static void usage(unsigned short op)
 		printf("      --verbose              display more messages\n");
 		printf("      --color                Switches on color\n");
 		printf("      --nocolor             Switches off color\n");
+		printf("      --noconfirm           do not ask for any confirmation\n");
 	}
 
 cleanup:
@@ -271,6 +272,9 @@ static int parsearg_global(int option)
 			config->nocolor_set = 1;
 		}
 		break;
+	case OPT_NOCONFIRM:
+		config->noconfirm = 1;
+		break;
 	default:
 		return -1;
 	}
@@ -304,6 +308,7 @@ static int parseargs(int argc, char *argv[])
 		{"crawl", no_argument, NULL, PW_OP_CRAWL},
 		{"debug", no_argument, NULL, OPT_DEBUG},
 		{"nocolor", no_argument, NULL, OPT_NOCOLOR},
+		{"noconfirm", no_argument, NULL, OPT_NOCONFIRM},
 		{"vote", no_argument, NULL, OPT_SORT_VOTE},
 		{"verbose", no_argument, NULL, OPT_VERBOSE},
 		{"target", required_argument, NULL, OPT_TARGET_DIR},

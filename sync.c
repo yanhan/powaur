@@ -20,6 +20,31 @@
 #include "sync.h"
 #include "util.h"
 
+/* Converts a list of strings into an array of char * terminated by NULL.
+ * The returned pointer is to be freed by the caller.
+
+ * @param list list of char *
+ */
+char **list_to_argv(alpm_list_t *args)
+{
+	alpm_list_t *i;
+	int cnt, total;
+
+	total = alpm_list_count(args);
+	if (!total) {
+		return NULL;
+	}
+
+	total++;
+	char **argv = xcalloc(total, sizeof(char *));
+	for (cnt = 0, i = args; i; i = i->next) {
+		argv[cnt++] = i->data;
+	}
+
+	argv[cnt] = NULL;
+	return argv;
+}
+
 /* Installs a single succesfully downloaded PKGBUILD using makepkg -si
  * Assumes that the package has been extracted into its own directory
  *
@@ -41,6 +66,10 @@ static int install_single_package(char *pkgname)
 
 	if (chdir(pkgname)) {
 		return error(PW_ERR_CHDIR, pkgname);
+	}
+
+	if (config->noconfirm) {
+		goto fork_pacman;
 	}
 
 	/* Ask user to edit PKGBUILD */
@@ -101,35 +130,50 @@ edit_dotinstall:
 fork_pacman:
 	free(dotinstall);
 
-	if (!yesno("Continue installing %s?", pkgname)) {
+	if (!config->noconfirm && !yesno("Continue installing %s?", pkgname)) {
 		return -2;
 	}
 
+	alpm_list_t *args = alpm_list_add(NULL, xstrdup("makepkg"));
+	alpm_list_add(args, xstrdup("-si"));
+
+	if (config->noconfirm) {
+		alpm_list_add(args, xstrdup("--noconfirm"));
+	}
+
+	/* Check if we're root. Invoke makepkg with --asroot if so */
+	uid_t myuid = geteuid();
+	if (myuid == 0) {
+		alpm_list_add(args, xstrdup("--asroot"));
+	}
+
+	char **argv = list_to_argv(args);
 	pid = fork();
 	if (pid == (pid_t) -1) {
 		return error(PW_ERR_FORK_FAILED);
 	} else if (pid == 0) {
-		/* Check if we're root. Invoke makepkg with --asroot if so */
-		uid_t myuid = geteuid();
-		if (myuid > 0) {
-			execlp("makepkg", "makepkg", "-si", NULL);
-		} else {
-			execlp("makepkg", "makepkg", "--asroot", "-si", NULL);
-		}
+		execvp("makepkg", argv);
 	} else {
 		/* Parent process */
 		ret = wait_or_whine(pid, "makepkg");
 		if (ret) {
-			return -1;
+			ret = -1;
+			goto cleanup;
 		}
+
+		ret = 0;
 	}
+
+cleanup:
+	free(argv);
+	FREELIST(args);
 
 	/* Change back to old directory */
 	if (chdir(cwd)) {
 		RET_ERR(PW_ERR_RESTORECWD, -2);
 	}
 
-	return 0;
+	return ret;
 }
 
 /* Search sync db for packages. Only works for 1 package now. */
@@ -668,7 +712,7 @@ static int sync_upgrade(CURL *curl, alpm_list_t *targets)
 		goto cleanup;
 	}
 
-	upgrade_all = yesno("Do you wish to upgrade the above packages?");
+	upgrade_all = config->noconfirm || yesno("Do you wish to upgrade the above packages?");
 	if (upgrade_all) {
 		/* Experimental */
 		alpm_list_t *final_targets = NULL;
@@ -772,7 +816,7 @@ free_aurpkg:
 	}
 
 	printf("\n");
-	if (yesno("Do you wish to proceed?")) {
+	if (config->noconfirm || yesno("Do you wish to proceed?")) {
 		final_targets = alpm_list_join(reinstall, upgrade);
 		final_targets = alpm_list_join(final_targets, new_packages);
 		joined = 1;

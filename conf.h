@@ -35,6 +35,7 @@ struct config_t {
 	unsigned opt_maxthreads : 1;
 	unsigned color_set      : 1;
 	unsigned nocolor_set    : 1;
+	unsigned noconfirm      : 1;
 };
 
 struct config_t *config_init(void);
