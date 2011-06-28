@@ -1,5 +1,8 @@
 VERSION         DESCRIPTION
 --------------------------------------------------------------------------------
+0.1.5         - --noconfirm option
+              - --list-aur option to list installed AUR packages
+              - -S: Only resolve deps for new / out-of-date AUR packages
 0.1.4.1       - Allow installing of packages as root
               - Per user directories for downloading packages. Please comment out
 			    the "TmpDir" option in your powaur.conf for this to take effect
