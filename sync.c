@@ -389,7 +389,7 @@ static int topo_install(struct pw_hashdb *hashdb, alpm_list_t *targets)
 	alpm_list_t *i;
 	int ret;
 
-	pw_printf(PW_LOG_INFO, "Syncing:\n");
+	pw_printf(PW_LOG_INFO, "Targets (%d):\n", alpm_list_count(targets));
 	print_list_color(targets, color.bmag);
 
 	for (i = targets; i; i = i->next) {
@@ -423,6 +423,11 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 		pkgname = graph_get_vertex_data(graph, curVertex);
 		from = hashmap_search(hashdb->pkg_from, (void *) pkgname);
 
+		if (!from) {
+			alpm_list_free(final_targets);
+			return NULL;
+		}
+
 		if (cnt++) {
 			pw_printf(PW_LOG_VDEBUG, " -> ");
 		}
@@ -453,10 +458,6 @@ static alpm_list_t *topo_get_targets(struct pw_hashdb *hashdb, struct graph *gra
 					final_targets = alpm_list_add(final_targets, (void *) pkgname);
 				}
 			}
-			break;
-		default:
-			/* Shouldn't happen */
-			pw_printf(PW_LOG_VDEBUG, "Unknown");
 			break;
 		}
 	}
