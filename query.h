@@ -13,8 +13,8 @@ enum aurquery_t {
 };
 
 enum {
-	NOFORCE = 0,
-	FORCE_DL
+	RESOLVE_IMMEDIATE,
+	RESOLVE_THOROUGH
 };
 
 /* Builds a dependency graph for the given package.
@@ -22,11 +22,11 @@ enum {
  * @param graph if graph is existing, will add on to the graph.
  * @param hashdb hash database
  * @param targets list of strings (packages)
- * @param force force downloading of AUR packages
+ * @param resolve_lvl level of dep resolution, immediate vs thorough
  *
  */
 void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
-					 alpm_list_t *targets, int force);
+					 alpm_list_t *targets, int resolve_lvl);
 
 /* Prints topological order of graph of strings
  *

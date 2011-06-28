@@ -510,7 +510,7 @@ static int upgrade_pkgs(alpm_list_t *targets, struct pw_hashdb *hashdb)
 
 	printf("Resolving dependencies... Please wait\n");
 	/* Build dep graph for all packages */
-	build_dep_graph(&graph, hashdb, target_pkgs, NOFORCE);
+	build_dep_graph(&graph, hashdb, target_pkgs, RESOLVE_IMMEDIATE);
 	ret = graph_toposort(graph, topost);
 	if (ret) {
 		printf("Cyclic dependencies detected!\n");

@@ -158,12 +158,13 @@ int powaur_query(alpm_list_t *targets)
  * @param curl curl handle
  * @param hashdb hash database
  * @param pkg package name
- * @param force force dl of AUR packages
+ * @param resolve_lvl level of dep resolution. RESOLVE_THOROUGH forces
+ *        downloading of AUR PKGBUILDs
  *
  * returns the "normalized" package if present, NULL on failure
  */
 static const char *normalize_package(CURL *curl, struct pw_hashdb *hashdb,
-									 const char *pkgname, int force)
+									 const char *pkgname, int resolve_lvl)
 {
 	const char *provided = NULL;
 	struct pkgpair pkgpair;
@@ -244,8 +245,11 @@ static const char *normalize_package(CURL *curl, struct pw_hashdb *hashdb,
 search_aur:
 	pkgpair.pkgname = pkgname;
 	pkgpair.pkg = NULL;
-	/* Don't bother downloading installed AUR packages which are up to date */
-	if (force == NOFORCE) {
+
+	/* For non RESOLVE_THOROUGH, don't bother downloading PKGBUILD of updated
+	 * AUR packages
+	 */
+	if (resolve_lvl != RESOLVE_THOROUGH) {
 		if (hash_search(hashdb->aur, &pkgpair) &&
 			!hash_search(hashdb->aur_outdated, (void *) pkgname)) {
 			goto done;
@@ -269,12 +273,13 @@ done:
  * @param hashdb hash database
  * @param curpkg current package we are resolving
  * @param dep_list pointer to list to store resulting dependencies
- * @param force force dl of AUR packages
+ * @param resolve_lvl level of dep resolution. RESOLVE_THOROUGH forces
+ *        downloading of AUR PKGBUILDs
  *
  * returns -1 on error, 0 on success
  */
 static int crawl_resolve(CURL *curl, struct pw_hashdb *hashdb, struct pkgpair *curpkg,
-						 alpm_list_t **dep_list, int force)
+						 alpm_list_t **dep_list, int resolve_lvl)
 {
 	alpm_list_t *i, *depmod_list, *deps = NULL;
 	struct pkgpair *pkgpair;
@@ -286,7 +291,7 @@ static int crawl_resolve(CURL *curl, struct pw_hashdb *hashdb, struct pkgpair *c
 	char cwd[PATH_MAX];
 
 	/* Normalize package before doing anything else */
-	final_pkgname = normalize_package(curl, hashdb, curpkg->pkgname, force);
+	final_pkgname = normalize_package(curl, hashdb, curpkg->pkgname, resolve_lvl);
 	if (!final_pkgname) {
 		return -1;
 	}
@@ -322,7 +327,8 @@ get_deps:
 
 	depmod_list = alpm_pkg_get_depends(pkgpair->pkg);
 	for (i = depmod_list; i; i = i->next) {
-		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data), force);
+		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data),
+									resolve_lvl);
 		/* Possibility of normalize_package fail due to AUR download failing */
 		if (!depname) {
 			alpm_list_free(deps);
@@ -344,7 +350,7 @@ aur_deps:
 	tmppkg.pkg = NULL;
 
 	/* For installed AUR packages which are up to date */
-	if (force == NOFORCE) {
+	if (resolve_lvl != RESOLVE_THOROUGH) {
 		if (hash_search(hashdb->aur, &tmppkg) &&
 			!hash_search(hashdb->aur_outdated, (void *) final_pkgname)) {
 			/* NOTE: top goto ! */
@@ -352,7 +358,8 @@ aur_deps:
 		}
 	}
 
-	/* Extract deps */
+	/* RESOLVE_THOROUGH / out to date AUR package.
+	 * Download pkgbuild and extract deps */
 	if (!getcwd(cwd, PATH_MAX)) {
 		return error(PW_ERR_GETCWD);
 	}
@@ -374,7 +381,7 @@ aur_deps:
 		/* Transfer control to memlist and normalize packages */
 		for (i = deps; i; i = i->next) {
 			memlist_ptr = memlist_add(hashdb->strpool, &i->data);
-			normdep = normalize_package(curl, hashdb, memlist_ptr, force);
+			normdep = normalize_package(curl, hashdb, memlist_ptr, resolve_lvl);
 			new_deps = alpm_list_add(new_deps, (void *) normdep);
 		}
 
@@ -412,7 +419,7 @@ static void add_immediate_deps(struct pw_hashdb *hashdb, const char *pkgname,
 }
 
 void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
-					 alpm_list_t *targets, int force)
+					 alpm_list_t *targets, int resolve_lvl)
 {
 	if (!graph) {
 		return;
@@ -452,7 +459,7 @@ void build_dep_graph(struct graph **graph, struct pw_hashdb *hashdb,
 			goto cleanup_deps;
 		}
 
-		ret = crawl_resolve(curl, hashdb, &pkgpair, &deps, force);
+		ret = crawl_resolve(curl, hashdb, &pkgpair, &deps, resolve_lvl);
 		if (ret) {
 			pw_fprintf(PW_LOG_ERROR, stderr, "Error in resolving packages.\n");
 			goto cleanup;
@@ -529,7 +536,7 @@ int powaur_crawl(alpm_list_t *targets)
 		stack_reset(topost);
 		graph = NULL;
 		target_pkgs = alpm_list_add(NULL, i->data);
-		build_dep_graph(&graph, hashdb, target_pkgs, FORCE_DL);
+		build_dep_graph(&graph, hashdb, target_pkgs, RESOLVE_THOROUGH);
 		if (have_cycles) {
 			printf("Cyclic dependencies for package \"%s\"\n", i->data);
 		}
