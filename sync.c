@@ -53,7 +53,7 @@ char **list_to_argv(alpm_list_t *args)
  */
 static int install_single_package(char *pkgname)
 {
-	static const char choices[] = {'y', 'n', 'a'};
+	static const char choices[] = {'y', 'n', 'a', 'Y', 'N', 'A'};
 	int ret;
 	char cwd[PATH_MAX];
 	char buf[PATH_MAX];
