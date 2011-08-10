@@ -100,6 +100,14 @@ void parse_powaur_config(FILE *fp)
 				++config->color;
 				pw_printf(PW_LOG_DEBUG, "%s%sParsed Color = On\n", TAB, TAB);
 			}
+		} else if (!strcmp(key, "NoConfirm")) {
+			if (!strcmp(val, "Off") && config->noconfirm > 0) {
+				--config->noconfirm;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed NoConfirm = Off\n", TAB, TAB);
+			} else if (!strcmp(val, "On")) {
+				++config->noconfirm;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed NoConfirm = On\n", TAB, TAB);
+			}
 		}
 	}
 }
