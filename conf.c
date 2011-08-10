@@ -102,10 +102,10 @@ void parse_powaur_config(FILE *fp)
 			}
 		} else if (!strcmp(key, "NoConfirm")) {
 			if (!strcmp(val, "Off") && config->noconfirm > 0) {
-				--config->noconfirm;
+				config->noconfirm = 0;
 				pw_printf(PW_LOG_DEBUG, "%s%sParsed NoConfirm = Off\n", TAB, TAB);
 			} else if (!strcmp(val, "On")) {
-				++config->noconfirm;
+				config->noconfirm = 1;
 				pw_printf(PW_LOG_DEBUG, "%s%sParsed NoConfirm = On\n", TAB, TAB);
 			}
 		}
