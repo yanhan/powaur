@@ -398,6 +398,17 @@ static int parseargs(int argc, char *argv[])
 	return 0;
 }
 
+static void check_debug_flag(int argc, char *argv[])
+{
+	int i;
+	for (i = 0; i < argc; i++) {
+		if (!strcmp(argv[i], "--debug")) {
+			config->loglvl |= PW_LOG_DEBUG;
+			config->loglvl |= PW_LOG_VDEBUG;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -406,7 +417,9 @@ int main(int argc, char *argv[])
 		goto cleanup;
 	}
 
-	/* Parse arguments first so debug info can be up asap if enabled */
+	/* Check for --debug to get it up asap */
+	check_debug_flag(argc, argv);
+
 	ret = parseargs(argc, argv);
 	if (ret) {
 		goto cleanup;
