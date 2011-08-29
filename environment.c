@@ -36,10 +36,10 @@ int setup_config(void)
 	return 0;
 }
 
-/* Initialize color */
-static void colors_setup(void)
+/* Initialize colors */
+void colors_setup(void)
 {
-	if (config->color) {
+	if (config->color > 0) {
 		color.black   = xstrdup(BLACK);
 		color.red     = xstrdup(RED);
 		color.green   = xstrdup(GREEN);
@@ -85,7 +85,7 @@ static void colors_setup(void)
 		color.votecol = xstrdup("");
 
 		/* Restore non-colorized print functions */
-		color_print_restore;
+		color_print_restore();
 	}
 }
 
@@ -236,13 +236,15 @@ cleanup:
 
 int setup_environment(void)
 {
+	if (setup_pacman_environment(0)) {
+		return -1;
+	}
+
 	if (setup_powaur_config()) {
 		return -1;
 	}
 
-	colors_setup();
-
-	return setup_pacman_environment(0);
+	return 0;
 }
 
 void cleanup_environment(void)

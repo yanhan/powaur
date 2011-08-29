@@ -63,6 +63,16 @@ static int powaur_init(void)
 	return ret;
 }
 
+static void postargs_setup(void)
+{
+	/* If stdout is not terminal, turn off colourized output */
+	if (!isatty(1)) {
+		config->color = 0;
+	}
+
+	colors_setup();
+}
+
 static void usage(unsigned short op)
 {
 	if (op == PW_OP_MAIN) {
@@ -420,18 +430,13 @@ int main(int argc, char *argv[])
 	/* Check for --debug to get it up asap */
 	check_debug_flag(argc, argv);
 
-	ret = parseargs(argc, argv);
-	if (ret) {
-		goto cleanup;
-	}
-
-	/* If stdout is not terminal, turn off colourized output */
-	if (!isatty(1)) {
-		config->color = 0;
-	}
-
 	ret = powaur_init();
 	ASSERT(ret == 0, goto cleanup);
+
+	ret = parseargs(argc, argv);
+	ASSERT(ret == 0, goto cleanup);
+
+	postargs_setup();
 
 	switch (config->op) {
 	case PW_OP_GET:

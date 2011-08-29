@@ -126,6 +126,7 @@ extern char *pacman_dbpath;
 extern alpm_list_t *pacman_cachedirs;
 
 int setup_environment(void);
+void colors_setup(void);
 void cleanup_environment(void);
 
 #endif
