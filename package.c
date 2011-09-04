@@ -58,6 +58,117 @@ int aurpkg_vote_cmp(const void *a, const void *b)
 		   ((const struct aurpkg_t *)a)->votes;
 }
 
+static char *strip_quotes(char *str, size_t *remain)
+{
+	if (!str || !*str)
+		return str;
+
+	char *p = str;
+	if (*p == '"') {
+		p++;
+		*remain = *remain - 1;
+		if (p[*remain - 1] == '"') {
+			p[*remain - 1] = '\0';
+			*remain = *remain - 1;
+		}
+	} else if (*p == '\'') {
+		p++;
+		*remain = *remain - 1;
+		if (p[*remain - 1] == '\'') {
+			p[*remain - 1] = '\0';
+			*remain = *remain - 1;
+		}
+	}
+
+	return p;
+}
+
+static char *substitute_bash_variables(char *str, struct hashmap *hmap)
+{
+	char buf[PATH_MAX];
+	char *bashvar;
+	char *p;
+	size_t remain = strlen(str);
+
+	if (!str || !*str) {
+		return NULL;
+	}
+
+	str = strip_quotes(str, &remain);
+	for (p = str; *p; p++) {
+		char *substart, *subend;
+		char *replace;
+		size_t sublen, replace_len;
+		size_t varlen, var_total_len;
+
+		if (*p != '$') {
+			remain--;
+			continue;
+		}
+
+		substart = p;
+		if (!substart || !substart[1]) {
+			break;
+		}
+
+		if (substart[1] == '{') {
+			if (!substart[2] || substart[2] == '}') {
+				break;
+			}
+
+			subend = strchr(substart + 3, '}');
+			if (!subend) {
+				/* No terminating } for opening { */
+				return NULL;
+			}
+
+			varlen = subend - (substart + 1) - 1;
+			memcpy(buf, substart + 2, varlen);
+			buf[varlen] = '\0';
+			replace = hashmap_search(hmap, buf);
+			if (!replace) {
+				/* can't find variable to sub */
+				return NULL;
+			}
+
+			replace_len = strlen(replace);
+			sublen = varlen + 3;
+			if (replace_len > sublen) {
+				memmove(substart + replace_len, subend + 1, remain - sublen + 1);
+				memcpy(substart, replace, replace_len);
+				p = subend + replace_len - var_total_len + 1;
+			} else {
+				size_t move_front = var_total_len - replace_len;
+				memcpy(substart, replace, replace_len);
+				if (move_front > 0) {
+					memmove(substart + replace_len, subend + 1, remain - sublen + 1);
+				}
+
+				p = substart + replace_len;
+			}
+
+			remain -= sublen;
+
+		} else {
+			char *replace;
+			size_t replace_len;
+
+			/* Should be the only bash variable on the line */
+			replace = hashmap_search(hmap, substart + 1);
+			if (!replace) {
+				break;
+			}
+
+			replace_len = strlen(replace);
+			memcpy(substart, replace, replace_len);
+			substart[replace_len] = '\0';
+			break;
+		}
+	}
+
+	return str;
+}
+
 /* Parse multi-line bash array.
  *
  * NOTE: Make sure the array elements are delimited by single quotes.
@@ -79,8 +190,8 @@ int aurpkg_vote_cmp(const void *a, const void *b)
  * TODO: provides, etc, ":" for optdepends
  * Refer to https://wiki.archlinux.org/index.php/Pkgbuild for details.
  */
-static void parse_bash_array(alpm_list_t **list, FILE *fp,
-							 char *buf, char *line, int preserve_ver)
+static void parse_bash_array(alpm_list_t **list, FILE *fp, struct hashmap *hmap,
+							 char *buf, char *line, int preserve_version)
 {
 	static const char *delim = " ";
 
@@ -132,7 +243,8 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 				}
 			}
 
-			if (preserve_ver) {
+			token = substitute_bash_variables(token, hmap);
+			if (preserve_version) {
 				*list = alpm_list_add(*list, strdup(token));
 			} else {
 				token = strtrim_ver(token);
@@ -157,12 +269,16 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 	}                                                                \
 
 /* Obtain deps, optional deps, conflicts, replaces from fp */
-void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
+void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp, int preserve_version)
 {
 	char buf[PATH_MAX];
 	char *line;
 	char *token;
 	char *saveptr;
+
+	struct hashmap *hmap = hashmap_new((pw_hash_fn) sdbm,
+			(pw_hashcmp_fn) strcmp);
+	struct memlist *strpool = memlist_new(4096, sizeof(char *), MEMLIST_PTR);
 
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
@@ -175,33 +291,64 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD depends\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->depends), fp, buf, line, 1);
+			parse_bash_array(&(pkg->depends), fp, hmap, buf, line, preserve_version);
 
 		} else if (!strncmp(line, "provides", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD provides\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->provides), fp, buf, line, 1);
+			parse_bash_array(&(pkg->provides), fp, hmap, buf, line, preserve_version);
 
 		} else if (!strncmp(line, "conflicts", 9)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD conflicts\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->conflicts), fp, buf, line, 1);
+			parse_bash_array(&(pkg->conflicts), fp, hmap, buf, line, preserve_version);
 		} else if (!strncmp(line, "replaces", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD replaces\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->replaces), fp, buf, line, 1);
+			parse_bash_array(&(pkg->replaces), fp, hmap, buf, line, preserve_version);
 		} else if (!strncmp(line, "arch", 4)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD architectures\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->arch), fp, buf, line, 1);
+			parse_bash_array(&(pkg->arch), fp, hmap, buf, line, preserve_version);
 		} else if (!strncmp(line, "build", 5)) {
 			break;
+		} else {
+			/* Add to our hash table with variable substitution */
+			char *eq;
+			char *key, *val;
+			size_t val_len;
+
+			eq = strchr(line, '=');
+			if (!eq) {
+				continue;
+			}
+
+			*eq = '\0';
+			key = line;
+			val = eq + 1;
+			val_len = strlen(val);
+
+			if (!*val || val_len == 0) {
+				continue;
+			}
+
+			val = substitute_bash_variables(val, hmap);
+			if (val) {
+				key = xstrdup(key);
+				key = memlist_add(strpool, &key);
+				val = xstrdup(val);
+				val = memlist_add(strpool, &val);
+				hashmap_insert(hmap, key, val);
+			}
 		}
 	}
+
+	memlist_free(strpool);
+	hashmap_free(hmap);
 }
 
 /* Returns the list of char * of dependencies specified in pkgbuild
@@ -214,31 +361,19 @@ alpm_list_t *grab_dependencies(const char *pkgbuild)
 	char buf[PATH_MAX];
 	char *line;
 	size_t len;
+	struct aurpkg_t *aurpkg;
 
 	fp = fopen(pkgbuild, "r");
 	if (!fp) {
 		return NULL;
 	}
 
-	while (line = fgets(buf, PATH_MAX, fp)) {
-		line = strtrim(line);
-		len = strlen(line);
-
-		if (!len) {
-			continue;
-		}
-
-		if (strncmp(line, "depends", 7)) {
-			continue;
-		}
-
-		/* Parse the array */
-		PARSE_BASH_ARRAY_PREAMBLE(line);
-		parse_bash_array(&ret, fp, buf, line, 0);
-		break;
-	}
-
+	aurpkg = xcalloc(1, sizeof(struct aurpkg_t));
+	parse_pkgbuild(aurpkg, fp, 0);
 	fclose(fp);
+	ret = aurpkg->depends;
+	aurpkg->depends = NULL;
+	aurpkg_free(aurpkg);
 	return ret;
 }
 

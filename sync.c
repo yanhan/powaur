@@ -311,7 +311,7 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 		fseek(fp, 0L, SEEK_SET);
 
 		pkg = results->data;
-		parse_pkgbuild(pkg, fp);
+		parse_pkgbuild(pkg, fp, 1);
 
 		if (found++) {
 			printf("\n");

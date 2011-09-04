@@ -33,7 +33,7 @@ void aurpkg_free(struct aurpkg_t *pkg);
 int aurpkg_name_cmp(const void *a, const void *b);
 int aurpkg_vote_cmp(const void *a, const void *b);
 
-void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp);
+void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp, int preserve_version);
 
 /* Returns the list of char * of dependencies specified in pkgbuild
  * The list and its contents must be freed by the caller
