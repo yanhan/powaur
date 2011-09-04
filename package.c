@@ -161,7 +161,6 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 {
 	char buf[PATH_MAX];
 	char *line;
-
 	char *token;
 	char *saveptr;
 
