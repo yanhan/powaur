@@ -168,7 +168,7 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
 
-		if (line == NULL || strlen(line) == 0) {
+		if (line == NULL || strlen(line) == 0 || line[0] == '#') {
 			continue;
 		}
 
