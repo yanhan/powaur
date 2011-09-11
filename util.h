@@ -77,6 +77,8 @@ void color_groups(alpm_list_t *grp);
 /* sdbm string hashing function */
 unsigned long sdbm(const char *str);
 
+void rmrf(const char *dir);
+
 #define MINI_BUFSZ 60
 
 #define ASSERT(somecond, someact) do {                               \

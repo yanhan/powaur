@@ -36,6 +36,7 @@ struct config_t {
 	unsigned color_set      : 1;
 	unsigned nocolor_set    : 1;
 	unsigned noconfirm      : 1;
+	unsigned clean_tempdir  : 1;
 };
 
 struct config_t *config_init(void);

@@ -108,6 +108,16 @@ void parse_powaur_config(FILE *fp)
 				config->noconfirm = 1;
 				pw_printf(PW_LOG_DEBUG, "%s%sParsed NoConfirm = On\n", TAB, TAB);
 			}
+		} else if (!strcmp(key, "CleanTempDir")) {
+			if (!strcmp(val, "No")) {
+				config->clean_tempdir = 0;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed CleanTempDir = No\n",
+						  TAB, TAB);
+			} else if (!strcmp(val, "Yes")) {
+				config->clean_tempdir = 1;
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed CleanTempDir = Yes\n",
+						  TAB, TAB);
+			}
 		}
 	}
 }

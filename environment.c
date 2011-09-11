@@ -250,6 +250,8 @@ int setup_environment(void)
 void cleanup_environment(void)
 {
 	if (config) {
+		if (config->clean_tempdir)
+			rmrf(powaur_dir);
 		config_free(config);
 	}
 

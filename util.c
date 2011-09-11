@@ -745,6 +745,39 @@ unsigned long sdbm(const char *str)
 	return hash;
 }
 
+void rmrf(const char *dir)
+{
+	DIR *dirp;
+	struct dirent *dent;
+	struct stat st;
+	char buf[PATH_MAX];
+
+	dirp = opendir(dir);
+	if (!dirp) {
+		return;
+	}
+
+	while (dent = readdir(dirp)) {
+		if (!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, "..")) {
+			continue;
+		}
+
+		if (lstat(dent->d_name, &st)) {
+			break;
+		}
+
+		if (!S_ISDIR(st.st_mode)) {
+			unlink(dent->d_name);
+		} else {
+			snprintf(buf, PATH_MAX, "%s/%s", dir, dent->d_name);
+			rmrf(buf);
+		}
+	}
+
+	closedir(dirp);
+	rmdir(dir);
+}
+
 /* Writes a directory to an archive */
 static int write_dir_archive(char *dirname, struct archive *a)
 {
