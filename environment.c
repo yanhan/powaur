@@ -18,6 +18,7 @@ enum _pw_errno_t pwerrno = PW_ERR_OK;
 char *powaur_dir;
 char *powaur_editor;
 int powaur_maxthreads;
+struct argv_array powaur_makepkg_argv;
 
 struct colorstrs color;
 
@@ -163,6 +164,7 @@ static int setup_powaur_config(void)
 	char buf[PATH_MAX];
 	struct stat st;
 
+	argv_array_push(&powaur_makepkg_argv, xstrdup("makepkg"));
 	pw_printf(PW_LOG_DEBUG, "%s: Setting up powaur configuration\n", __func__);
 
 	dir = getenv("XDG_CONFIG_HOME");
@@ -256,6 +258,7 @@ void cleanup_environment(void)
 	}
 
 	colors_cleanup();
+	argv_array_free(&powaur_makepkg_argv, 1);
 	free(powaur_editor);
 	free(powaur_dir);
 

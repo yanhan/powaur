@@ -3,6 +3,7 @@
 
 #include <alpm_list.h>
 
+#include "argv-array.h"
 #include "conf.h"
 #include "powaur.h"
 
@@ -119,6 +120,7 @@ extern enum _pw_errno_t pwerrno;
 extern char *powaur_dir;
 extern char *powaur_editor;
 extern int powaur_maxthreads;
+extern struct argv_array powaur_makepkg_argv;
 
 /* Pacman configuration settings */
 extern char *pacman_rootdir;

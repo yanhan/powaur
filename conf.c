@@ -6,6 +6,7 @@
 #include <alpm.h>
 #include <alpm_list.h>
 
+#include "argv-array.h"
 #include "conf.h"
 #include "environment.h"
 #include "powaur.h"
@@ -38,6 +39,7 @@ void parse_powaur_config(FILE *fp)
 	char buf[PATH_MAX];
 	char *line, *key, *val;
 	size_t len;
+	int i;
 
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
@@ -118,6 +120,23 @@ void parse_powaur_config(FILE *fp)
 				pw_printf(PW_LOG_DEBUG, "%s%sParsed CleanTempDir = Yes\n",
 						  TAB, TAB);
 			}
+		} else if (!strcmp(key, "MakepkgOpts")) {
+			const char *delim = " ";
+			char *token, *saveptr = NULL;
+			token = strtok_r(val, delim, &saveptr);
+			if (token) {
+				argv_array_push(&powaur_makepkg_argv, xstrdup(token));
+				for (val = NULL; ; ) {
+					token = strtok_r(val, delim, &saveptr);
+					if (token == NULL)
+						break;
+					argv_array_push(&powaur_makepkg_argv, xstrdup(token));
+				}
+			}
+
+			for (i = 1; i < powaur_makepkg_argv.nr; i++)
+				pw_printf(PW_LOG_DEBUG, "%s%sParsed makepkg argv[%d] = %s\n",
+					TAB, TAB, i-1, powaur_makepkg_argv.argv[i]);
 		}
 	}
 }

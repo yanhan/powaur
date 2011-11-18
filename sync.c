@@ -59,6 +59,7 @@ static int install_single_package(char *pkgname)
 	char buf[PATH_MAX];
 	char *dotinstall;
 	pid_t pid;
+	struct argv_array makepkg_argv = ARGV_ARRAY_INIT;
 
 	if (!getcwd(cwd, PATH_MAX)) {
 		return error(PW_ERR_GETCWD);
@@ -134,20 +135,26 @@ fork_pacman:
 		return -2;
 	}
 
-	alpm_list_t *args = alpm_list_add(NULL, xstrdup("makepkg"));
-	alpm_list_add(args, xstrdup("-si"));
+	argv_array_copy(&makepkg_argv, &powaur_makepkg_argv);
+	argv_array_push(&makepkg_argv, xstrdup("-s"));
+	argv_array_push(&makepkg_argv, xstrdup("-i"));
 
 	if (config->noconfirm) {
-		alpm_list_add(args, xstrdup("--noconfirm"));
+		argv_array_push(&makepkg_argv, xstrdup("--noconfirm"));
 	}
 
 	/* Check if we're root. Invoke makepkg with --asroot if so */
 	uid_t myuid = geteuid();
 	if (myuid == 0) {
-		alpm_list_add(args, xstrdup("--asroot"));
+		argv_array_push(&makepkg_argv, xstrdup("--asroot"));
 	}
 
-	char **argv = list_to_argv(args);
+	/* Check */
+	int i;
+	for (i = 0; i < makepkg_argv.nr; i++)
+		printf("makepkg_argv[%d] = %s\n", i, makepkg_argv.argv[i]);
+
+	char **argv = makepkg_argv.argv;
 	pid = fork();
 	if (pid == (pid_t) -1) {
 		return error(PW_ERR_FORK_FAILED);
@@ -165,10 +172,8 @@ fork_pacman:
 	}
 
 cleanup:
-	free(argv);
-	FREELIST(args);
-
 	/* Change back to old directory */
+	argv_array_free(&makepkg_argv, 1);
 	if (chdir(cwd)) {
 		RET_ERR(PW_ERR_RESTORECWD, -2);
 	}
