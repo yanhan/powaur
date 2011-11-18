@@ -36,6 +36,7 @@ HDRS=
 OBJS=
 DIST_FILES=
 
+SRC+=argv-array.c
 SRC+=conf.c
 SRC+=curl.c
 SRC+=download.c
@@ -81,6 +82,7 @@ powaur.o: powaur.c POWAUR-VERSION-GEN
 powaur.o: EXTRA_CPPFLAGS = -DPOWAUR_VERSION='"$(POWAUR_VERSION)"'
 
 $(OBJS): error.h environment.h powaur.h util.h wrapper.h
+argv-array.o: argv-array.h
 conf.o environment.o query.o: conf.h
 download.o json.o sync.o: curl.h
 download.o powaur.o sync.o: download.h
