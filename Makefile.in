@@ -5,7 +5,7 @@ all::
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 ALL_CFLAGS=$(CFLAGS)
-ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl -pthread
+ALL_LDFLAGS=$(LDFLAGS) -lalpm -lcurl -lyajl -pthread -larchive
 EXTRA_CPPFLAGS=
 
 prefix=@prefix@
