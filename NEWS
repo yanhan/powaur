@@ -1,5 +1,6 @@
 VERSION         DESCRIPTION
 --------------------------------------------------------------------------------
+0.1.6         - Updated to use libalpm 7
 0.1.5.1       - Uppercase input now works for questions to editing PKGBUILDs, etc
 0.1.5         - --noconfirm option
               - --list-aur option to list installed AUR packages
