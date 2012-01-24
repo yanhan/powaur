@@ -47,6 +47,8 @@ enum _pw_errno_t {
 
 	/* Initialization errors */
 	PW_ERR_INIT_CONFIG,
+	PW_ERR_INIT_ALPM_HANDLE,
+	PW_ERR_INIT_ALPM_REGISTER_SYNC,
 	PW_ERR_INIT_ENV,
 	PW_ERR_INIT_HANDLE,
 	PW_ERR_INIT_DIR,

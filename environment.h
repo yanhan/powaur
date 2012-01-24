@@ -1,6 +1,7 @@
 #ifndef POWAUR_ENV_H
 #define POWAUR_ENV_H
 
+#include <alpm.h>
 #include <alpm_list.h>
 
 #include "conf.h"
@@ -124,6 +125,7 @@ extern int powaur_maxthreads;
 extern char *pacman_rootdir;
 extern char *pacman_dbpath;
 extern alpm_list_t *pacman_cachedirs;
+extern alpm_list_t *pacman_syncdbs;
 
 int setup_environment(void);
 void colors_setup(void);

@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <alpm.h>
 #include <alpm_list.h>
 
 #include "conf.h"
@@ -25,6 +26,7 @@ struct colorstrs color;
 char *pacman_rootdir;
 char *pacman_dbpath;
 alpm_list_t *pacman_cachedirs;
+alpm_list_t *pacman_syncdbs;
 
 int setup_config(void)
 {
@@ -117,6 +119,8 @@ static void colors_cleanup(void)
  */
 static int setup_pacman_environment(int reload)
 {
+	enum _alpm_errno_t err;
+	alpm_list_t *i;
 	if (reload) {
 		pw_printf(PW_LOG_DEBUG, "Reloading pacman configuration\n");
 		pacman_cachedirs = NULL;
@@ -141,9 +145,18 @@ static int setup_pacman_environment(int reload)
 										 xstrdup(PACMAN_DEF_CACHEDIR));
 	}
 
-	alpm_option_set_root(pacman_rootdir);
-	alpm_option_set_dbpath(pacman_dbpath);
-	alpm_option_set_cachedirs(pacman_cachedirs);
+	alpm_option_set_cachedirs(config->handle, pacman_cachedirs);
+	config->handle = alpm_initialize(pacman_rootdir, pacman_dbpath, &err);
+	if (!config->handle) {
+		return error(PW_ERR_INIT_ALPM_HANDLE);
+	}
+	/* Register sync dbs */
+	for (i = pacman_syncdbs; i; i = i->next) {
+		if (!alpm_db_register_sync(config->handle, (const char *) i->data,
+								   ALPM_SIG_USE_DEFAULT)) {
+			return error(PW_ERR_INIT_ALPM_REGISTER_SYNC);
+		}
+	}
 
 	return 0;
 }
@@ -260,4 +273,5 @@ void cleanup_environment(void)
 	/* No need to free pacman_cachedirs */
 	free(pacman_rootdir);
 	free(pacman_dbpath);
+	FREELIST(pacman_syncdbs);
 }

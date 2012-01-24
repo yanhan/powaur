@@ -172,8 +172,7 @@ int extract_file(const char *filename)
 
 	archive_read_support_compression_all(archive);
 	archive_read_support_format_all(archive);
-	ret = archive_read_open_filename(archive, filename,
-									 ARCHIVE_DEFAULT_BYTES_PER_BLOCK);
+	ret = archive_read_open_filename(archive, filename, 16384);
 
 	if (ret != ARCHIVE_OK) {
 		return error(PW_ERR_ARCHIVE_OPEN);

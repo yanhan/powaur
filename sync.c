@@ -180,8 +180,8 @@ cleanup:
 static int sync_search(CURL *curl, alpm_list_t *targets)
 {
 	alpm_list_t *i, *j, *search_results;
-	pmdb_t *db;
-	pmpkg_t *spkg;
+	alpm_db_t *db;
+	alpm_pkg_t *spkg;
 	struct aurpkg_t *pkg;
 	size_t listsz;
 
@@ -216,11 +216,11 @@ static int sync_search(CURL *curl, alpm_list_t *targets)
 }
 
 /* -Si, search inside sync dbs */
-static pmpkg_t *search_syncdbs(alpm_list_t *dbs, const char *pkgname)
+static alpm_pkg_t *search_syncdbs(alpm_list_t *dbs, const char *pkgname)
 {
 	alpm_list_t *i, *j;
-	pmdb_t *sdb;
-	pmpkg_t *spkg;
+	alpm_db_t *sdb;
+	alpm_pkg_t *spkg;
 
 	for (i = dbs; i; i = i->next) {
 		sdb = i->data;
@@ -242,8 +242,8 @@ static int sync_info(CURL *curl, alpm_list_t *targets)
 	int found, ret, pkgcount;
 	alpm_list_t *i, *j, *results;
 	alpm_list_t *free_list = NULL;
-	alpm_list_t *syncdbs = alpm_option_get_syncdbs();
-	pmpkg_t *spkg;
+	alpm_list_t *syncdbs = alpm_option_get_syncdbs(config->handle);
+	alpm_pkg_t *spkg;
 
 	char cwd[PATH_MAX];
 	char filename[PATH_MAX];
@@ -742,7 +742,7 @@ static int sync_targets(CURL *curl, alpm_list_t *targets)
 	struct pkgpair pkgpair;
 	struct pkgpair *pkgpair_ptr;
 	struct aurpkg_t *aurpkg;
-	pmpkg_t *lpkg;
+	alpm_pkg_t *lpkg;
 	alpm_list_t *i;
 	alpm_list_t *reinstall, *new_packages, *upgrade, *downgrade, *not_aur;
 	alpm_list_t *aurpkg_list, *final_targets;

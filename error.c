@@ -58,6 +58,10 @@ const char *pw_strerror(enum _pw_errno_t err)
 	switch (err) {
 	case PW_ERR_INIT_CONFIG:
 		return "config initialization failed";
+	case PW_ERR_INIT_ALPM_HANDLE:
+		return "Failed to initialize alpm handle";
+	case PW_ERR_INIT_ALPM_REGISTER_SYNC:
+		return "Failed to register alpm database";
 	case PW_ERR_INIT_ENV:
 		return "Setup environment failed";
 	case PW_ERR_INIT_HANDLE:

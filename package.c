@@ -248,7 +248,7 @@ alpm_list_t *resolve_dependencies(struct pw_hashdb *hashdb, alpm_list_t *package
 	alpm_list_t *i, *k, *m, *q;
 	alpm_list_t *deps, *newdeps;
 
-	pmpkg_t *pkg;
+	alpm_pkg_t *pkg;
 	struct pkgpair pkgpair;
 	struct pkgpair *pkgpair_ptr;
 	char pkgbuild[PATH_MAX];
@@ -347,7 +347,7 @@ const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp)
 {
 	const char *repo = NULL;
 	alpm_list_t *i, *k;
-	pmpkg_t *spkg;
+	alpm_pkg_t *spkg;
 
 	for (i = sdbs; i && !repo; i = i->next) {
 		for (k = alpm_db_get_pkgcache(i->data); k; k = k->next) {
@@ -371,7 +371,7 @@ const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp)
 }
 
 /* For plain -Q, -Qs, -Ss */
-void print_pkg_pretty(alpm_list_t *sdbs, pmpkg_t *pkg, enum dumplvl_t lvl)
+void print_pkg_pretty(alpm_list_t *sdbs, alpm_pkg_t *pkg, enum dumplvl_t lvl)
 {
 	alpm_list_t *grp = NULL;
 	const char *repo;
@@ -399,20 +399,20 @@ int pacman_db_dump(enum pkgfrom_t from, enum dumplvl_t lvl)
 	alpm_list_t *i, *j, *dbs, *syncdbs;
 	const char *repo;
 
-	pmdb_t *localdb, *db;
-	pmpkg_t *pkg;
-	pmdepend_t *dep;
+	alpm_db_t *localdb, *db;
+	alpm_pkg_t *pkg;
+	alpm_depend_t *dep;
 
 	switch (lvl) {
 	case DUMP_Q:
 	case DUMP_Q_SEARCH:
 	case DUMP_Q_INFO:
-		localdb = alpm_option_get_localdb();
-		syncdbs = alpm_option_get_syncdbs();
+		localdb = alpm_option_get_localdb(config->handle);
+		syncdbs = alpm_option_get_syncdbs(config->handle);
 		break;
 	case DUMP_S_SEARCH:
 	case DUMP_S_INFO:
-		dbs = alpm_option_get_syncdbs();
+		dbs = alpm_option_get_syncdbs(config->handle);
 		break;
 	}
 
@@ -488,14 +488,14 @@ static void humanize_size(off_t sz, const char *prefix)
 		   units[ptr]);
 }
 
-void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
+void pacman_pkgdump(alpm_pkg_t *pkg, enum pkgfrom_t from)
 {
 	static const char *datefmt = "%a %d %b %Y %I:%M:%S %p %Z";
 
 	alpm_list_t *i, *results = NULL;
-	pmdb_t *db;
-	pmdepend_t *dep;
-	pmpkgreason_t reason;
+	alpm_db_t *db;
+	alpm_depend_t *dep;
+	alpm_pkgreason_t reason;
 
 	int has_script;
 	time_t inst_time;
@@ -576,10 +576,10 @@ void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from)
 
 		printf("%s%s%s ", color.bold, REASON, color.nocolor);
 		switch (reason) {
-		case PM_PKG_REASON_EXPLICIT:
+		case ALPM_PKG_REASON_EXPLICIT:
 			printf("Explicitly installed");
 			break;
-		case PM_PKG_REASON_DEPEND:
+		case ALPM_PKG_REASON_DEPEND:
 			printf("Installed as a dependency for another package");
 			break;
 		default:

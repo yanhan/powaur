@@ -27,7 +27,7 @@ static int powaur_cleanup(int ret)
 	curl_cleanup();
 	_pwhandle_free(pwhandle);
 	cleanup_environment();
-	alpm_release();
+	alpm_release(config->handle);
 
 	exit(ret);
 }
@@ -36,10 +36,7 @@ static int powaur_init(void)
 {
 	struct stat st;
 	int ret = 0;
-
-	if (alpm_initialize() == -1) {
-		return -1;
-	}
+	enum _alpm_errno_t err;
 
 	if (setup_environment()) {
 		return error(PW_ERR_INIT_ENV);
