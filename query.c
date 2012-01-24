@@ -1,3 +1,4 @@
+#include <string.h>
 #include <alpm.h>
 
 #include "conf.h"
@@ -10,12 +11,32 @@
 #include "query.h"
 #include "util.h"
 
+/* Removes version information from a package string like "glibc>=2.12" */
+static void chompversion(char *str)
+{
+	char *p;
+	p = strchr(str, '>');
+	if (p) {
+		*p = 0;
+		return;
+	}
+	p = strchr(str, '<');
+	if (p) {
+		*p = 0;
+		return;
+	}
+	p = strchr(str, '=');
+	if (p) {
+		*p = 0;
+	}
+}
+
 /* -Qi */
-static int query_info(pmdb_t *localdb, alpm_list_t *targets)
+static int query_info(alpm_db_t *localdb, alpm_list_t *targets)
 {
 	int ret, hits, found, pkgcount;
 	alpm_list_t *i, *k, *dbcache;
-	pmpkg_t *pkg;
+	alpm_pkg_t *pkg;
 
 	ret = pkgcount = hits = found = 0;
 	dbcache = alpm_db_get_pkgcache(localdb);
@@ -49,16 +70,16 @@ static int query_info(pmdb_t *localdb, alpm_list_t *targets)
 }
 
 /* -Qs, only 1 target for now */
-static int query_search(pmdb_t *localdb, const char *pkgname)
+static int query_search(alpm_db_t *localdb, const char *pkgname)
 {
 	int ret, found;
 	const char *repo;
 	alpm_list_t *i, *k, *dbcache, *groups;
 	alpm_list_t *syncdbs;
-	pmpkg_t *pkg;
+	alpm_pkg_t *pkg;
 
 	dbcache = alpm_db_get_pkgcache(localdb);
-	syncdbs = alpm_option_get_syncdbs();
+	syncdbs = alpm_option_get_syncdbs(config->handle);
 
 	for (k = dbcache; k; k = k->next) {
 		pkg = k->data;
@@ -80,14 +101,14 @@ static int query_search(pmdb_t *localdb, const char *pkgname)
 
 int powaur_query(alpm_list_t *targets)
 {
-	pmdb_t *localdb = alpm_option_get_localdb();
+	alpm_db_t *localdb = alpm_option_get_localdb(config->handle);
 	if (!localdb) {
 		return error(PW_ERR_INIT_LOCALDB);
 	}
 
 	alpm_list_t *dblist = NULL;
 	alpm_list_t *i, *j, *dbcache;
-	pmpkg_t *pkg, *spkg;
+	alpm_pkg_t *pkg, *spkg;
 	int ret = 0, found;
 
 	/* -i and -s conflicting options */
@@ -127,7 +148,7 @@ int powaur_query(alpm_list_t *targets)
 		ret = query_search(localdb, targets->data);
 	} else {
 		/* Plain -Q */
-		alpm_list_t *sdbs = alpm_option_get_syncdbs();
+		alpm_list_t *sdbs = alpm_option_get_syncdbs(config->handle);
 		dbcache = alpm_db_get_pkgcache(localdb);
 
 		for (i = targets; i; i = i->next) {
@@ -290,6 +311,7 @@ static int crawl_resolve(CURL *curl, struct pw_hashdb *hashdb, struct pkgpair *c
 	const char *cache_result;
 	const char *depname, *final_pkgname;
 	char cwd[PATH_MAX];
+	char buf[PATH_MAX];
 
 	/* Normalize package before doing anything else */
 	final_pkgname = normalize_package(curl, hashdb, curpkg->pkgname, resolve_lvl);
@@ -328,8 +350,11 @@ get_deps:
 
 	depmod_list = alpm_pkg_get_depends(pkgpair->pkg);
 	for (i = depmod_list; i; i = i->next) {
-		depname = normalize_package(curl, hashdb, alpm_dep_get_name(i->data),
-									resolve_lvl);
+		char *s = alpm_dep_compute_string(i->data);
+		strncpy(buf, s, sizeof(buf));
+		free(s);
+		chompversion(buf);
+		depname = normalize_package(curl, hashdb, buf, resolve_lvl);
 		/* Possibility of normalize_package fail due to AUR download failing */
 		if (!depname) {
 			alpm_list_free(deps);

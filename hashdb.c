@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <alpm.h>
+#include "environment.h"
 #include "hashdb.h"
 #include "hash.h"
 #include "memlist.h"
@@ -61,7 +62,7 @@ void hashdb_free(struct pw_hashdb *hashdb)
 }
 
 /* hashes packages and their provides
- * @param dbcache list of pmpkg_t * to be hashed
+ * @param dbcache list of alpm_pkg_t * to be hashed
  * @param htable hash table hashing struct pkgpair
  * @param provides hashbst used to hash provides
  * @param hashdb hash database
@@ -70,7 +71,7 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 						  struct hashbst *provides, struct pw_hashdb *hashdb)
 {
 	alpm_list_t *i, *k;
-	pmpkg_t *pkg;
+	alpm_pkg_t *pkg;
 	struct pkgpair pkgpair;
 	void *memlist_ptr;
 
@@ -104,8 +105,8 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 struct pw_hashdb *build_hashdb(void)
 {
 	alpm_list_t *i, *k, *syncdbs, *dbcache;
-	pmdb_t *db;
-	pmpkg_t *pkg;
+	alpm_db_t *db;
+	alpm_pkg_t *pkg;
 
 	char buf[1024];
 	const char *pkgname;
@@ -115,7 +116,7 @@ struct pw_hashdb *build_hashdb(void)
 
 	struct pw_hashdb *hashdb = hashdb_new();
 
-	db = alpm_option_get_localdb();
+	db = alpm_option_get_localdb(config->handle);
 	if (!db) {
 		error(PW_ERR_LOCALDB_NULL);
 		goto error_cleanup;
@@ -129,7 +130,7 @@ struct pw_hashdb *build_hashdb(void)
 
 	hash_packages(dbcache, hashdb->local, hashdb->local_provides, hashdb);
 
-	syncdbs = alpm_option_get_syncdbs();
+	syncdbs = alpm_option_get_syncdbs(config->handle);
 	for (i = syncdbs; i; i = i->next) {
 		db = i->data;
 		hash_packages(alpm_db_get_pkgcache(db), hashdb->sync, hashdb->sync_provides,

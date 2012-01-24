@@ -2,6 +2,7 @@
 #define POWAUR_CONF_H
 
 #include <stdio.h>
+#include <alpm.h>
 
 #include "powaur.h"
 
@@ -12,6 +13,7 @@ struct config_t {
 	char *target_dir;
 	unsigned short maxthreads;
 	unsigned short color;
+	alpm_handle_t *handle;
 
 	unsigned help           : 1;
 	unsigned version        : 1;

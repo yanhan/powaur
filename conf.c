@@ -15,11 +15,12 @@
 struct config_t *config_init(void)
 {
 	struct config_t *conf;
+	enum _alpm_errno_t err;
+
 	conf = xcalloc(1, sizeof(struct config_t));
 	conf->op = PW_OP_MAIN;
 	conf->loglvl = PW_LOG_NORM | PW_LOG_INFO | PW_LOG_WARNING | PW_LOG_ERROR;
 	conf->color = 1;
-
 	return conf;
 }
 
@@ -341,20 +342,12 @@ int parse_pmconfig(void)
 				goto cleanup;
 			} else {
 				/* Must be a repository
-				 * We just add the repository for now
+				 * Add repository name to pacman_syncdbs list
 				 */
 				in_options = 0;
 
 				pw_printf(PW_LOG_DEBUG, "%sParsing Repo [%s]\n", TAB, line);
-
-				if (!alpm_db_register_sync(line)) {
-					pw_printf(PW_LOG_ERROR, "%sFailed to register %s db\n",
-							  TAB, line);
-					goto cleanup;
-				}
-
-				pw_printf(PW_LOG_DEBUG, "%sRegistering sync database '%s'\n",
-						  TAB, line);
+				pacman_syncdbs = alpm_list_add(pacman_syncdbs, xstrdup(line));
 			}
 
 		} else if (in_options) {

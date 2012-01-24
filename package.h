@@ -50,12 +50,12 @@ alpm_list_t *resolve_dependencies(struct pw_hashdb *hashdb, alpm_list_t *package
 const char *which_db(alpm_list_t *sdbs, const char *pkgname, alpm_list_t **grp);
 
 /* Prints pretty pkg, for plain -Q, -Qs, -Ss */
-void print_pkg_pretty(alpm_list_t *sdbs, pmpkg_t *pkg, enum dumplvl_t lvl);
+void print_pkg_pretty(alpm_list_t *sdbs, alpm_pkg_t *pkg, enum dumplvl_t lvl);
 
 /* Dumps entire pacman database, for -Q, -Qi, -Qs, -Si, -Ss w/o targets */
 int pacman_db_dump(enum pkgfrom_t from, enum dumplvl_t lvl);
 
 /* Dumps a pacman package, for -Qi and -Si */
-void pacman_pkgdump(pmpkg_t *pkg, enum pkgfrom_t from);
+void pacman_pkgdump(alpm_pkg_t *pkg, enum pkgfrom_t from);
 
 #endif

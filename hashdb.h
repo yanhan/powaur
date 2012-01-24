@@ -45,7 +45,7 @@ struct pw_hashdb *hashdb_new(void);
 void hashdb_free(struct pw_hashdb *hashdb);
 struct pw_hashdb *build_hashdb(void);
 
-/* Used for hashing, pkg can be pmpkg_t or aurpkg_t */
+/* Used for hashing, pkg can be alpm_pkg_t or aurpkg_t */
 struct pkgpair {
 	const char *pkgname;
 	void *pkg;
