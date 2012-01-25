@@ -208,7 +208,7 @@ check_home:
 			}
 
 			pw_printf(PW_LOG_DEBUG, "%sParsing %s\n", TAB, buf);
-			(fp);
+			parse_powaur_config(fp);
 			fclose(fp);
 		}
 	}
