@@ -72,6 +72,7 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 {
 	alpm_list_t *i, *k;
 	alpm_pkg_t *pkg;
+	alpm_depend_t *dep;
 	struct pkgpair pkgpair;
 	void *memlist_ptr;
 
@@ -90,7 +91,8 @@ static void hash_packages(alpm_list_t *dbcache, struct hash_table *htable,
 
 		/* Provides */
 		for (k = alpm_pkg_get_provides(pkg); k; k = k->next) {
-			snprintf(buf, 1024, "%s", k->data);
+			dep = k->data;
+			snprintf(buf, 1024, "%s", dep->name);
 			if (!strtrim_ver(buf)) {
 				continue;
 			}
