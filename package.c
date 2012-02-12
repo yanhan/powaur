@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include <alpm.h>
 
 #include "environment.h"
+#include "hash.h"
 #include "hashdb.h"
 #include "package.h"
 #include "powaur.h"
@@ -58,6 +60,108 @@ int aurpkg_vote_cmp(const void *a, const void *b)
 		   ((const struct aurpkg_t *)a)->votes;
 }
 
+/*
+ * Repeatedly performs substitutions of bash variables using hash_map
+ * for lookups
+ */
+static char *substitute_vars(char *str, struct hashmap *hash, int maxlen)
+{
+	int i, k, diff, len, newlen, repl_len, st, needle_len;
+	char *p, *q, *s, *is, *sub;
+	char buf[PATH_MAX];
+	void *val;
+
+	len = strlen(str);
+	s = str;
+	while (p = strchr(s, '$')) {
+		if (!p[1])
+			break;
+		if (p[1] == '{') {
+			q = strchr(p+2, '}');
+			if (!q)
+				break;
+			/* Empty inner string */
+			if (q-p-2 <= 0) {
+				s = q+1;
+				continue;
+			}
+			for (is = p+2, k = 0; is < q; is++, k++)
+				buf[k] = *is;
+			buf[k] = 0;
+			val = hashmap_search(hash, buf);
+			if (!val) {
+				s = q+1;
+				continue;
+			}
+			sub = (char *) val;
+			repl_len = q-p+1;
+			diff = strlen(sub) - repl_len;
+			newlen = len + diff;
+			if (diff > 0) {
+				/* Shift backwards */
+				if (newlen > maxlen)
+					break;
+				st = q-str+1;
+				for (i = len-1; i >= st; i--)
+					str[i+diff] = str[i];
+				while (*sub)
+					*p++ = *sub++;
+			} else if (diff < 0) {
+				if (newlen < 0)
+					break;
+				for (i = q-str+1; i < len; i++)
+					str[i+diff] = str[i];
+				while (*sub)
+					*p++ = *sub++;
+				str[newlen] = 0;
+			}
+			s = p;
+			len = newlen;
+		} else {
+			q = p+1;
+			while (q && (*q == '_' || isalnum(*q)))
+				q++;
+			needle_len = q-p-1;
+			if (needle_len <= 0) {
+				s = p+1;
+				continue;
+			}
+			strncpy(buf, p+1, needle_len);
+			buf[needle_len] = 0;
+			val = hashmap_search(hash, buf);
+			if (!val) {
+				s = q;
+				continue;
+			}
+			sub = (char *) val;
+			repl_len = q-p;
+			diff = strlen(sub) - repl_len;
+			newlen = len + diff;
+			if (diff > 0) {
+				/* Shift backwards */
+				if (newlen > maxlen)
+					break;
+				st = q-str;
+				for (i = len-1; i >= st; i--)
+					str[i+diff] = str[i];
+				while (*sub)
+					*p++ = *sub++;
+			} else if (diff < 0) {
+				if (newlen < 0)
+					break;
+				for (i = q-str; i < len; i++)
+					str[i+diff] = str[i];
+				while (*sub)
+					*p++ = *sub++;
+				str[newlen] = 0;
+			}
+			s = p;
+			len = newlen;
+		}
+	}
+	return str;
+}
+
 /* Parse multi-line bash array.
  *
  * NOTE: Make sure the array elements are delimited by single quotes.
@@ -80,7 +184,8 @@ int aurpkg_vote_cmp(const void *a, const void *b)
  * Refer to https://wiki.archlinux.org/index.php/Pkgbuild for details.
  */
 static void parse_bash_array(alpm_list_t **list, FILE *fp,
-							 char *buf, char *line, int preserve_ver)
+							 char *buf, char *line, int preserve_ver,
+							 struct hashmap *hash)
 {
 	static const char *delim = " ";
 
@@ -88,6 +193,7 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 	int can_break = 0;
 	char *token, *saveptr;
 	char *tmpstr;
+	static char buffer[PATH_MAX];
 
 	/* Parse multi-line bash array */
 	for (; !feof(fp) && !can_break; line = fgets(buf, PATH_MAX, fp)) {
@@ -132,14 +238,21 @@ static void parse_bash_array(alpm_list_t **list, FILE *fp,
 				}
 			}
 
+			memset(buffer, 0, sizeof(buffer));
 			if (preserve_ver) {
-				*list = alpm_list_add(*list, strdup(token));
+				strncpy(buffer, token, PATH_MAX);
+				if (hash)
+					substitute_vars(buffer, hash, PATH_MAX-1);
+				*list = alpm_list_add(*list, strdup(buffer));
 			} else {
 				token = strtrim_ver(token);
-				*list = alpm_list_add(*list, strdup(token));
+				strncpy(buffer, token, PATH_MAX);
+				if (hash)
+					substitute_vars(buffer, hash, PATH_MAX-1);
+				*list = alpm_list_add(*list, strdup(buffer));
 			}
 
-			pw_printf(PW_LOG_DEBUG, "%sParsed \"%s\"\n", TAB, token);
+			pw_printf(PW_LOG_DEBUG, "%sParsed \"%s\"\n", TAB, buffer);
 		}
 	}
 }
@@ -176,29 +289,29 @@ void parse_pkgbuild(struct aurpkg_t *pkg, FILE *fp)
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD depends\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->depends), fp, buf, line, 1);
+			parse_bash_array(&(pkg->depends), fp, buf, line, 1, NULL);
 
 		} else if (!strncmp(line, "provides", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD provides\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->provides), fp, buf, line, 1);
+			parse_bash_array(&(pkg->provides), fp, buf, line, 1, NULL);
 
 		} else if (!strncmp(line, "conflicts", 9)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD conflicts\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->conflicts), fp, buf, line, 1);
+			parse_bash_array(&(pkg->conflicts), fp, buf, line, 1, NULL);
 		} else if (!strncmp(line, "replaces", 8)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD replaces\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->replaces), fp, buf, line, 1);
+			parse_bash_array(&(pkg->replaces), fp, buf, line, 1, NULL);
 		} else if (!strncmp(line, "arch", 4)) {
 			pw_printf(PW_LOG_DEBUG, "Parsing PKGBUILD architectures\n");
 
 			PARSE_BASH_ARRAY_PREAMBLE(line);
-			parse_bash_array(&(pkg->arch), fp, buf, line, 1);
+			parse_bash_array(&(pkg->arch), fp, buf, line, 1, NULL);
 		} else if (!strncmp(line, "build", 5)) {
 			break;
 		}
@@ -213,7 +326,9 @@ alpm_list_t *grab_dependencies(const char *pkgbuild)
 	alpm_list_t *ret = NULL;
 	FILE *fp;
 	char buf[PATH_MAX];
-	char *line;
+	char nbuf[PATH_MAX];
+	char *line, *p, *var, *x, *y;
+	void *key, *val;
 	size_t len;
 
 	fp = fopen(pkgbuild, "r");
@@ -221,6 +336,14 @@ alpm_list_t *grab_dependencies(const char *pkgbuild)
 		return NULL;
 	}
 
+	/*
+	 * 12/02/2012:
+	 * Build hash table of bash variables because
+	 * some bash variables can appear inside depends
+	 */
+	struct hashmap *hash = hashmap_new((pw_hash_fn) sdbm,
+									   (pw_hashcmp_fn) strcmp);
+	struct memlist *strpool = memlist_new(1024, sizeof(char *), MEMLIST_PTR);
 	while (line = fgets(buf, PATH_MAX, fp)) {
 		line = strtrim(line);
 		len = strlen(line);
@@ -230,15 +353,33 @@ alpm_list_t *grab_dependencies(const char *pkgbuild)
 		}
 
 		if (strncmp(line, "depends", 7)) {
+			if (line[0] == '#')
+				continue;
+			p = strchr(line, '=');
+			if (!p)
+				continue;
+			memset(nbuf, 0, sizeof(nbuf));
+			var = line;
+			*p++ = 0;
+			/* Substitute variables after '=' */
+			strncpy(nbuf, p, PATH_MAX);
+			substitute_vars(nbuf, hash, PATH_MAX-1);
+			x = xstrdup(line);
+			y = xstrdup(nbuf);
+			void *key = memlist_add(strpool, &x);
+			void *val = memlist_add(strpool, &y);
+			hashmap_insert(hash, key, val);
 			continue;
 		}
 
-		/* Parse the array */
+		/* Parse the array (with variable substitution) */
 		PARSE_BASH_ARRAY_PREAMBLE(line);
-		parse_bash_array(&ret, fp, buf, line, 0);
+		parse_bash_array(&ret, fp, buf, line, 0, hash);
 		break;
 	}
 
+	memlist_free(strpool);
+	hashmap_free(hash);
 	fclose(fp);
 	return ret;
 }
